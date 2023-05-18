@@ -34,6 +34,7 @@ export class TransactionController {
   })
   @ApiOkResponse({ type: GetTransactionResponse })
   @ApiNotFoundResponse({ description: 'Transaction with hash ${hash} not found' })
+  
   async getTransactionById(
     @Query() getTrancsactionDto: GetTransactionRequest,
   ): Promise<GetTransactionResponse> {

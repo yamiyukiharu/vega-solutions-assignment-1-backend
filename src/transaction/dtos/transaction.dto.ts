@@ -18,11 +18,11 @@ export class GetTransactionRequest {
 
   @IsEnum(Protocol)
   @ApiProperty({ enum: Protocol })
-  protocol: string;
+  protocol: Protocol;
 
   @IsEnum(Pool)
   @ApiProperty({ enum: Pool })
-  pool: string;
+  pool: Pool;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value))

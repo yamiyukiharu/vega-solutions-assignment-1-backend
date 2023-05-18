@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
+import { Pool, Protocol } from 'src/common/enums';
 import { Entity, Column, ObjectIdColumn, ObjectId, Index } from 'typeorm';
 
 export class TxFee {
@@ -24,6 +25,7 @@ export class Transaction {
   @Exclude()
   _id: ObjectId;
 
+  // expose id instead of _id so as not to leak implementation details
   @Expose()
   @ApiProperty()
   get id(): string {
@@ -37,11 +39,11 @@ export class Transaction {
 
   @Column()
   @ApiProperty()
-  protocol: string;
+  protocol: Protocol;
 
   @Column()
   @ApiProperty()
-  pool: string;
+  pool: Pool;
 
   @Column('simple-json')
   @ApiProperty()
