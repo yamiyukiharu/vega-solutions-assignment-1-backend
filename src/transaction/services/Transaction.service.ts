@@ -36,7 +36,16 @@ export class TransactionService {
 
   async getTransactionCount(protocol: Protocol, pool: Pool): Promise<number> {
     // @ts-ignore
-    const val = await this.transactionRepo.count({ protocol, pool});
+    const val = await this.transactionRepo.count({ protocol, pool });
     return val;
+  }
+
+  async triggerReportGeneration(
+    protocol: Protocol,
+    pool: Pool,
+    startTime: Date,
+    endTime: Date,
+  ): Promise<string> {
+    return '1234';
   }
 }

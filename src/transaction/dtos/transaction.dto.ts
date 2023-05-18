@@ -1,9 +1,21 @@
 import { Transform } from 'class-transformer';
-import { IsEnum, IsHexadecimal, IsOptional, Matches } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsHexadecimal,
+  IsOptional,
+  Matches,
+} from 'class-validator';
 import { Pool, Protocol } from 'src/common/enums';
-import { ApiResponse, ApiResponseProperty, OmitType } from '@nestjs/swagger';
+import {
+  ApiResponse,
+  ApiResponseProperty,
+  OmitType,
+  PickType,
+} from '@nestjs/swagger';
 import { Transaction } from '../models/Transaction.model';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TransactionReport } from '../models/TransactionReport.model';
 
 export class GetTransactionRequest {
   @Matches(/^0x([A-Fa-f0-9]+)$/, {
@@ -42,13 +54,35 @@ export class TransactionResult extends OmitType(Transaction, [
 export class GetTransactionResponse {
   @ApiPropertyOptional()
   page?: number;
-  
+
   @ApiPropertyOptional()
   total?: number;
-  
+
   @ApiPropertyOptional()
   limit?: number;
 
   @ApiResponseProperty({ type: [TransactionResult] })
   results: TransactionResult[];
 }
+
+export class GenerateReportRequest {
+  @IsEnum(Protocol)
+  @ApiProperty({ enum: Protocol })
+  protocol: Protocol;
+
+  @IsEnum(Pool)
+  @ApiProperty({ enum: Pool })
+  pool: Pool;
+
+  @IsDateString()
+  @ApiProperty({ description: 'Start date in ISO8601 format' })
+  startTime: string;
+
+  @IsDateString()
+  @ApiProperty({ description: 'Start date in ISO8601 format' })
+  endTime: string;
+}
+
+export class ReportStatusResponse extends PickType(TransactionReport, [
+  'status',
+] as const) {}
