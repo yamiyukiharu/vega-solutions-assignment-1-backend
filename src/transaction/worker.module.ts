@@ -5,11 +5,16 @@ import { TransactionService } from './services/Transaction.service';
 import { AppConfigModule } from 'src/common/AppConfig.module';
 import { ConfigService } from '@nestjs/config';
 import { QueueModule } from 'src/common/Queue.module';
+import { DatabaseModule } from 'src/common/Database.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Transaction } from './models/Transaction.model';
 
 @Module({
   imports: [
     QueueModule,
-    AppConfigModule
+    AppConfigModule,
+    DatabaseModule,
+    TypeOrmModule.forFeature([Transaction])
   ],
   providers: [TransactionsReportConsumer, TransactionService],
 })
