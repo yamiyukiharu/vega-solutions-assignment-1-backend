@@ -2,13 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '../models/Transaction.model';
 import { Repository } from 'typeorm';
-import { Pool, Protocol } from 'src/common/enums';
+import { Pool, Protocol, ReportStatus } from 'src/common/enums';
+import { TransactionReport } from '../models/TransactionReport.model';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class TransactionService {
   constructor(
     @InjectRepository(Transaction)
     private transactionRepo: Repository<Transaction>,
+    @InjectRepository(TransactionReport)
+    private transactionReport: Repository<TransactionReport>,
+    @InjectQueue('transactions-report') private reportQueue: Queue,
   ) {}
 
   async getTransactionByHash(
@@ -46,6 +52,18 @@ export class TransactionService {
     startTime: Date,
     endTime: Date,
   ): Promise<string> {
-    return '1234';
+    const report = await this.transactionReport.save({
+      status: ReportStatus.Pending,
+      protocol,
+      pool,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+    });
+
+    const id = report._id.toString();
+
+    await this.reportQueue.add(report);
+
+    return id;
   }
 }

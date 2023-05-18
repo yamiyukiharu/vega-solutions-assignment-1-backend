@@ -9,12 +9,14 @@ import { QueueModule } from 'src/common/Queue.module';
 import { DatabaseModule } from 'src/common/Database.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Transaction } from './models/Transaction.model';
+import { TransactionReport } from './models/TransactionReport.model';
 
 @Module({
   imports: [
     QueueModule,
     AppConfigModule,
-    TypeOrmModule.forFeature([Transaction])
+    TypeOrmModule.forFeature([Transaction]),
+    TypeOrmModule.forFeature([TransactionReport])
   ],
   controllers: [TransactionController],
   providers: [TransactionService, ExchangeRateService],
