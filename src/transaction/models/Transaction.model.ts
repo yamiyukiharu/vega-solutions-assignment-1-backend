@@ -1,3 +1,4 @@
+import { Exclude, Expose } from 'class-transformer';
 import { Entity, Column, ObjectIdColumn, ObjectId, Index } from 'typeorm';
 
 
@@ -14,7 +15,13 @@ export type TxPrice = {
 @Entity()
 export class Transaction {
   @ObjectIdColumn()
+  @Exclude()
   _id: ObjectId;
+
+  @Expose()
+  get id(): string {
+    return this._id.toHexString();
+  }
 
   @Column()
   @Index()

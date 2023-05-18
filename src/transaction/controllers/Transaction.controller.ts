@@ -1,5 +1,17 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  UseInterceptors,
+} from '@nestjs/common';
 import { TransactionService } from '../services/Transaction.service';
+import {
+  GetTransactionRequest,
+  GetTransactionResponse,
+} from '../dtos/transaction.dto';
 
 export type GetTxByIdQuery = {
   protocol: string;
@@ -7,18 +19,52 @@ export type GetTxByIdQuery = {
   hash?: string;
   page?: number;
   limit?: number;
-}
+};
 
-@Controller('v1/transaction')
+@Controller('v1/transactions')
 export class TransactionController {
-  constructor(private transactionService: TransactionService) { }
+  constructor(private transactionService: TransactionService) {}
 
   @Get()
-  async getTransactionById(@Query() query: GetTxByIdQuery) {
-    const { hash, protocol, pool, page, limit } = query
-    // TODO: validate inputs
-    // TODO: handle pagintion
-    // RESEARCH: should we use DTOs between services and controllers?
-    return await this.transactionService.getTransactionByHash(hash, protocol, pool)
+  @UseInterceptors(ClassSerializerInterceptor)
+  async getTransactionById(
+    @Query() getTrancsactionDto: GetTransactionRequest,
+  ): Promise<GetTransactionResponse> {
+    const { hash, protocol, pool, page, limit } = getTrancsactionDto;
+
+    if (hash) {
+      const tx = await this.transactionService.getTransactionByHash(
+        hash,
+        protocol,
+        pool,
+      );
+
+      if (!tx) {
+        throw new NotFoundException(`Transaction with hash ${hash} not found`);
+      }
+
+      return {
+        results: [tx],
+      };
+    }
+
+    const tx = await this.transactionService.getTransactionList(
+      protocol,
+      pool,
+      page,
+      limit,
+    );
+
+    const total = await this.transactionService.getTransactionCount(
+      protocol,
+      pool,
+    );
+
+    return {
+      page,
+      limit,
+      total,
+      results: tx,
+    };
   }
 }
