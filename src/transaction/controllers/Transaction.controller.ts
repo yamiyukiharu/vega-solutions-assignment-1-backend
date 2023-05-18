@@ -12,6 +12,7 @@ import {
   GetTransactionRequest,
   GetTransactionResponse,
 } from '../dtos/transaction.dto';
+import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 export type GetTxByIdQuery = {
   protocol: string;
@@ -22,11 +23,17 @@ export type GetTxByIdQuery = {
 };
 
 @Controller('v1/transactions')
+@ApiTags('transactions')
 export class TransactionController {
   constructor(private transactionService: TransactionService) {}
 
   @Get()
   @UseInterceptors(ClassSerializerInterceptor)
+  @ApiOperation({
+    summary: 'Get a list of transactions based on protocol and pool',
+  })
+  @ApiOkResponse({ type: GetTransactionResponse })
+  @ApiNotFoundResponse({ description: 'Transaction with hash ${hash} not found' })
   async getTransactionById(
     @Query() getTrancsactionDto: GetTransactionRequest,
   ): Promise<GetTransactionResponse> {
