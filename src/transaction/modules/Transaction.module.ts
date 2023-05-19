@@ -5,19 +5,25 @@ import { TransactionService } from '../services/Transaction.service';
 import { ExchangeRateService } from '../../exchange-rate/services/ExchangeRate.service';
 import { AppConfigModule } from 'src/common/modules/AppConfig.module';
 import { QueueModule } from 'src/common/modules/Queue.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Transaction } from '../models/Transaction.model';
-import { TransactionReport } from '../models/TransactionReport.model';
+import { Transaction, TransactionSchema } from '../models/Transaction.model';
+import { TransactionReport, TransactionReportSchema } from '../models/TransactionReport.model';
 import { ITransactionProvider } from '../providers/ITransaction.provider';
 import { TheGraphUniswapV3Provider } from '../providers/TheGraphUniswapV3.provider';
+import { MongooseModule } from '@nestjs/mongoose';
+import { DatabaseModule } from 'src/common/modules/Database.module';
 
 @Module({
   imports: [
     HttpModule,
     QueueModule,
     AppConfigModule,
-    TypeOrmModule.forFeature([Transaction]),
-    TypeOrmModule.forFeature([TransactionReport]),
+    DatabaseModule,
+    MongooseModule.forFeature([
+      { name: Transaction.name, schema: TransactionSchema },
+    ]),
+    MongooseModule.forFeature([
+      { name: TransactionReport.name, schema: TransactionReportSchema },
+    ]),
   ],
   controllers: [TransactionController],
   providers: [

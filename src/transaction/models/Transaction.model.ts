@@ -1,7 +1,6 @@
+import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
 import { Pool, Protocol } from 'src/common/enums';
-import { Entity, Column, ObjectIdColumn, ObjectId, Index } from 'typeorm';
 
 export class TxFee {
   @ApiProperty()
@@ -19,41 +18,34 @@ export class TxPrice {
   usdt: string;
 }
 
-@Entity()
+@Schema({ collection: 'transaction'})
 export class Transaction {
-  @ObjectIdColumn()
-  @Exclude()
-  _id: ObjectId;
+  @Prop()
+  _id: string;
 
-  // expose id instead of _id so as not to leak implementation details
-  @Expose()
-  @ApiProperty()
-  get id(): string {
-    return this._id.toHexString();
-  }
-
-  @Column()
-  @Index()
+  @Prop({unique: true, index: true})
   @ApiProperty()
   hash: string;
 
-  @Column()
+  @Prop()
   @ApiProperty()
   protocol: Protocol;
 
-  @Column()
+  @Prop()
   @ApiProperty()
   pool: Pool;
 
-  @Column('simple-json')
+  @Prop(TxFee)
   @ApiProperty()
   fee: TxFee;
 
-  @Column('simple-json')
+  @Prop(TxPrice)
   @ApiProperty()
   price: TxPrice;
 
-  @Column('timestamp')
+  @Prop()
   @ApiProperty()
-  timestamp: string;
+  timestamp: number;
 }
+
+export const TransactionSchema = SchemaFactory.createForClass(Transaction);

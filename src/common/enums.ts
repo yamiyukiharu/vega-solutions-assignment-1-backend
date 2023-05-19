@@ -3,7 +3,7 @@ export enum Protocol {
 }
 
 export enum Pool {
-  ETH_USDC = 'usdc_eth',
+  ETH_USDC = 'eth_usdc',
 }
 
 export enum ReportStatus {

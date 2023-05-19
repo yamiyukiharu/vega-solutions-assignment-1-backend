@@ -3,7 +3,9 @@ import {
   IsDateString,
   IsEnum,
   IsHexadecimal,
+  IsInt,
   IsOptional,
+  IsPositive,
   Matches,
 } from 'class-validator';
 import { Pool, Protocol } from 'src/common/enums';
@@ -39,12 +41,12 @@ export class GetTransactionRequest {
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @ApiPropertyOptional({ default: 0 })
-  page: number = 0;
+  page?: number = 0;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @ApiPropertyOptional({ default: 10 })
-  limit: number = 10;
+  limit?: number = 10;
 }
 
 export class TransactionResult extends OmitType(Transaction, [
@@ -62,7 +64,7 @@ export class GetTransactionResponse {
   limit?: number;
 
   @ApiResponseProperty({ type: [TransactionResult] })
-  results: TransactionResult[];
+  data: TransactionResult[];
 }
 
 export class GenerateReportRequest {
@@ -86,3 +88,31 @@ export class GenerateReportRequest {
 export class GetReportStatusResponse extends PickType(TransactionReport, [
   'status',
 ] as const) {}
+
+export class GetReportRequest {
+  @Transform(({ value }) => parseInt(value))
+  page: number;
+
+  @Transform(({ value }) => parseInt(value))
+  limit: number;
+}
+
+export class GetReportResponse {
+  @ApiProperty()
+  totalFee: {
+    eth: string;
+    usdt: string;
+  };
+
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  data: TransactionResult[];
+}

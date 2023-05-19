@@ -20,6 +20,8 @@ import {
   GetTransactionRequest,
   GetTransactionResponse,
   GetReportStatusResponse,
+  GetReportRequest,
+  GetReportResponse,
 } from '../dtos/transaction.dto';
 import {
   ApiAcceptedResponse,
@@ -83,11 +85,11 @@ export class TransactionController {
       }
 
       return {
-        results: [tx],
+        data: [tx],
       };
     }
 
-    const tx = await this.transactionService.getTransactionList(
+    const transactions = await this.transactionService.getTransactionList(
       protocol,
       pool,
       page,
@@ -103,7 +105,7 @@ export class TransactionController {
       page,
       limit,
       total,
-      results: tx,
+      data: transactions,
     };
   }
 
@@ -137,7 +139,6 @@ export class TransactionController {
   }
 
   @Get('reports/status/:id')
-
   async getReportStatus(
     @Param('id') id: string,
   ): Promise<GetReportStatusResponse> {
@@ -150,15 +151,20 @@ export class TransactionController {
     return { status };
   }
 
-  // @Get('reports/:id')
-  // @ApiOkResponse({ description: 'Report generation status' })
-  // async getReport(@Param('id') id: string) {
-  //   const report = await this.transactionService.getReport(id);
+  @Get('reports/:id')
+  @UseInterceptors(ClassSerializerInterceptor)
+  @ApiOkResponse({ description: 'Report generation status' })
+  async getReport(
+    @Param('id') id: string,
+    @Query() query: GetReportRequest,
+  ): Promise<GetReportResponse> {
+    const { page, limit } = query;
+    const report = await this.transactionService.getReport(id, page, limit);
 
-  //   if (!report) {
-  //     throw new NotFoundException(`Report with id ${id} not found`);
-  //   }
+    if (!report) {
+      throw new NotFoundException(`Report with id ${id} not found`);
+    }
 
-  //   return report;
-  // }
+    return report;
+  }
 }

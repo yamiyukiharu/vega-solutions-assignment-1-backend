@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '../models/Transaction.model';
-import { Repository } from 'typeorm';
 import { ObjectId } from 'mongodb';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TransactionReport } from '../models/TransactionReport.model';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { ITransactionProvider } from '../providers/ITransaction.provider';
+import * as dayjs from 'dayjs';
+import BigNumber from 'bignumber.js';
+import { GetReportResponse } from '../dtos/transaction.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class TransactionService {
   constructor(
-    @InjectRepository(Transaction)
-    private transactionRepo: Repository<Transaction>,
-    @InjectRepository(TransactionReport)
-    private reportRepo: Repository<TransactionReport>,
+    @InjectModel(Transaction.name)
+    private transactionRepo: Model<Transaction>,
+    @InjectModel(TransactionReport.name)
+    private reportRepo: Model<TransactionReport>,
     @InjectQueue('transactions-report') private reportQueue: Queue,
     private uniswapV3Provider: ITransactionProvider,
   ) {}
@@ -24,9 +27,9 @@ export class TransactionService {
     hash: string,
     protocol: Protocol,
     pool: Pool,
-  ): Promise<Transaction> {
-    const val = await this.transactionRepo.findOneBy({ hash, protocol, pool });
-    return val;
+  ): Promise<Transaction | null> {
+    const val = await this.transactionRepo.findOne({ hash, protocol, pool });
+    return val ? val.toObject() : null;
   }
 
   async getTransactionList(
@@ -35,11 +38,13 @@ export class TransactionService {
     page: number,
     limit: number,
   ): Promise<Transaction[]> {
-    const val = await this.transactionRepo.find({
-      where: { protocol, pool },
-      skip: page * limit,
-      take: limit,
-    });
+    const val = await this.transactionRepo
+      .find({
+        protocol,
+        pool,
+      })
+      .skip(page * limit)
+      .limit(limit);
     return val;
   }
 
@@ -55,7 +60,7 @@ export class TransactionService {
     startTime: Date,
     endTime: Date,
   ): Promise<string> {
-    const report = await this.reportRepo.save({
+    const { id } = await this.reportRepo.create({
       status: ReportStatus.PENDING,
       protocol,
       pool,
@@ -63,28 +68,55 @@ export class TransactionService {
       endTime: endTime.toISOString(),
     });
 
-    const id = report._id.toString();
-
-    await this.reportQueue.add(report);
+    await this.reportQueue.add({ id });
 
     return id;
   }
 
-  async updateReportStatus(id: ObjectId, status: ReportStatus) {
-    await this.reportRepo.update(id, { status });
+  async updateReportStatus(id: string, status: ReportStatus) {
+    await this.reportRepo.findByIdAndUpdate(id, { status });
   }
 
-  async getReportStatus(id: string): Promise<ReportStatus> {
-    const report = await this.reportRepo.findOneBy({ _id: new ObjectId(id) });
-    return report.status;
+  async getReportStatus(id: string): Promise<ReportStatus | null> {
+    const report = await this.reportRepo.findById(id);
+    return report ? report.status : null;
   }
 
-  async recordTransactionsWithRange(
-    protocol: Protocol,
-    pool: Pool,
-    startTime: Date,
-    endTime: Date,
-  ) {
+  async getReport(
+    id: string,
+    page: number,
+    limit: number,
+  ): Promise<GetReportResponse> {
+    const report = await this.reportRepo.findById(id);
+    const { startTime, endTime, count, totalFee } = report;
+
+    const startTimestamp = dayjs(startTime).unix();
+    const endTimestamp = dayjs(endTime).unix();
+
+    const transactions = await this.transactionRepo
+      .find({
+        timestamp: {
+          $gte: startTimestamp,
+          $lte: endTimestamp,
+        },
+      })
+      .skip(page * limit)
+      .limit(limit);
+
+    // sum of all fee.eth
+    return {
+      page,
+      limit,
+      totalFee,
+      total: count,
+      data: transactions,
+    };
+  }
+
+  async processReport(id: string) {
+    const report = await this.reportRepo.findById(id);
+    const { protocol, pool, startTime, endTime } = report;
+
     let provider: ITransactionProvider;
     switch (protocol) {
       case Protocol.UNISWAPV3:
@@ -94,8 +126,11 @@ export class TransactionService {
         throw new Error(`Protocol ${protocol} not supported`);
     }
 
+    const limit = 1000;
     let page = 0;
-    const limit = 100;
+    let count = 0;
+    let totalFeeEth = BigNumber(0);
+    let totalFeeUsdt = BigNumber(0);
 
     while (true) {
       const data = await provider.getTransactions({
@@ -106,12 +141,20 @@ export class TransactionService {
         endTime,
       });
 
+      totalFeeEth = totalFeeEth.plus(
+        data.reduce((acc, item) => acc.plus(item.fee), BigNumber(0)),
+      );
+
+      totalFeeUsdt = totalFeeUsdt.plus(
+        data.reduce((acc, item) => acc.plus(item.fee), BigNumber(0)),
+      );
+
       const modelData: Partial<Transaction>[] = data.map((item) => {
         return {
           hash: item.id,
           protocol,
           pool,
-          timestamp: item.timestamp,
+          timestamp: parseInt(item.timestamp),
           fee: {
             eth: item.fee,
             usdt: item.fee,
@@ -123,11 +166,32 @@ export class TransactionService {
         };
       });
 
-      this.transactionRepo.save(modelData);
+      // Prepare the list of update operations
+      const updateOperations = modelData.map((document) => ({
+        updateOne: {
+          filter: { hash: document.hash }, // Check for existing documents with the same hash
+          update: { $set: document },
+          upsert: true, // Perform an upsert if the document doesn't exist
+        },
+      }));
+
+      await this.transactionRepo.bulkWrite(updateOperations);
+
+      page++;
+      count += data.length;
 
       if (data.length < limit - 1) {
         break;
       }
     }
+
+    await this.reportRepo.findByIdAndUpdate(id, {
+      status: ReportStatus.COMPLETED,
+      count,
+      totalFee: {
+        eth: totalFeeEth.toString(),
+        usdt: totalFeeUsdt.toString(),
+      },
+    });
   }
 }

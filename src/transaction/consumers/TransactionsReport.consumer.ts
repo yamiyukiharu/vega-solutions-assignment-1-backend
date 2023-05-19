@@ -9,34 +9,22 @@ export class TransactionsReportConsumer {
   constructor(private transactionService: TransactionService) {}
 
   @Process()
-  async createReport(job: Job<TransactionReport>) {
-    
+  async createReport(job: Job<{ id: string }>) {
     await this.transactionService.updateReportStatus(
-      job.data._id,
+      job.data.id,
       ReportStatus.IN_PROGRESS,
     );
 
-    const { protocol, pool, startTime, endTime } = job.data;
-
     try {
-      await this.transactionService.recordTransactionsWithRange(
-        protocol,
-        pool,
-        new Date(startTime),
-        new Date(endTime),
-      );
+      await this.transactionService.processReport(job.data.id);
     } catch (e) {
       await this.transactionService.updateReportStatus(
-        job.data._id,
+        job.data.id,
         ReportStatus.FAILED,
       );
       // TODO: Log error
+      console.log(e);
       throw e;
     }
-
-    await this.transactionService.updateReportStatus(
-      job.data._id,
-      ReportStatus.COMPLETED,
-    );
   }
 }
