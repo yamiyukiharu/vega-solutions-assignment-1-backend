@@ -32,15 +32,6 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
     super();
   }
 
-  private getPoolAddress(pool: Pool): string {
-    switch (pool) {
-      case Pool.ETH_USDC:
-        return '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
-      default:
-        throw new Error('Pool not supported');
-    }
-  }
-
   async getTransactions(
     options: GetTransactionOptions,
   ): Promise<GetTransactionResult[]> {
@@ -50,7 +41,6 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
       limit = 100,
       startTime,
       endTime,
-      blockNumber,
     } = options;
 
     const skip = page * limit;
@@ -63,10 +53,6 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
         ? `where: { pool: "${poolAddress}", timestamp_gte: "${startTimestamp}", timestamp_lte: "${endTimestamp}" }`
         : `where: { pool: "${poolAddress}" }`;
 
-    const blockNumberClause = blockNumber
-      ? `block: { number: ${blockNumber} }`
-      : '';
-
     const query = `
     query {
       swaps(
@@ -75,7 +61,6 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
         orderBy: timestamp,
         orderDirection: desc,
         ${whereClause},
-        ${blockNumberClause}
       ) {
         amount0
         amount1

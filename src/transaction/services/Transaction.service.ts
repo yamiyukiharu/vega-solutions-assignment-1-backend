@@ -5,7 +5,10 @@ import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TransactionReport } from '../models/TransactionReport.model';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { ITransactionProvider } from '../providers/ITransaction.provider';
+import {
+  GetTransactionResult,
+  ITransactionProvider,
+} from '../providers/ITransaction.provider';
 import * as dayjs from 'dayjs';
 import BigNumber from 'bignumber.js';
 import { GetReportResponse } from '../dtos/transaction.dto';
@@ -117,14 +120,7 @@ export class TransactionService {
     const report = await this.reportRepo.findById(id);
     const { protocol, pool, startTime, endTime } = report;
 
-    let provider: ITransactionProvider;
-    switch (protocol) {
-      case Protocol.UNISWAPV3:
-        provider = this.uniswapV3Provider;
-        break;
-      default:
-        throw new Error(`Protocol ${protocol} not supported`);
-    }
+    const provider = this.getProvider(protocol);
 
     const limit = 1000;
     let page = 0;
@@ -149,33 +145,7 @@ export class TransactionService {
         data.reduce((acc, item) => acc.plus(item.fee), BigNumber(0)),
       );
 
-      const modelData: Partial<Transaction>[] = data.map((item) => {
-        return {
-          hash: item.id,
-          protocol,
-          pool,
-          timestamp: parseInt(item.timestamp),
-          fee: {
-            eth: item.fee,
-            usdt: item.fee,
-          },
-          price: {
-            eth: item.swapPrice,
-            usdt: item.swapPrice,
-          },
-        };
-      });
-
-      // Prepare the list of update operations
-      const updateOperations = modelData.map((document) => ({
-        updateOne: {
-          filter: { hash: document.hash }, // Check for existing documents with the same hash
-          update: { $set: document },
-          upsert: true, // Perform an upsert if the document doesn't exist
-        },
-      }));
-
-      await this.transactionRepo.bulkWrite(updateOperations);
+      await this.saveTransactionsFromProvider(protocol, pool, data);
 
       page++;
       count += data.length;
@@ -193,5 +163,77 @@ export class TransactionService {
         usdt: totalFeeUsdt.toString(),
       },
     });
+  }
+
+  async recordNewTransactions(protocol: Protocol, pool: Pool) {
+    const provider = this.getProvider(protocol);
+
+    const savedLatestBlock = await this.transactionRepo
+      .find({})
+      .sort({ blockNumber: -1 })
+      .limit(1);
+
+    const limit = 1000;
+    let page = 0;
+
+    while (true) {
+      const data = await provider.getTransactions({
+        pool,
+        page: 0,
+        limit: 1000,
+        startBlock: savedLatestBlock ? savedLatestBlock[0].blockNumber : 0,
+      });
+
+      await this.saveTransactionsFromProvider(protocol, pool, data);
+
+      page++;
+
+      if (data.length < limit - 1) {
+        break;
+      }
+    }
+  }
+
+  private getProvider(protocol: Protocol): ITransactionProvider {
+    let provider: ITransactionProvider;
+    switch (protocol) {
+      case Protocol.UNISWAPV3:
+        provider = this.uniswapV3Provider;
+        break;
+      default:
+        throw new Error(`Protocol ${protocol} not supported`);
+    }
+    return provider;
+  }
+
+  private async saveTransactionsFromProvider(
+    protocol: Protocol,
+    pool: Pool,
+    data: GetTransactionResult[],
+  ) {
+    const modelData: Partial<Transaction>[] = data.map((item) => {
+      return {
+        hash: item.id,
+        protocol,
+        pool,
+        timestamp: parseInt(item.timestamp),
+        fee: {
+          eth: item.fee,
+          usdt: item.fee,
+        },
+        blockNumber: item.blockNumber,
+      };
+    });
+
+    // Prepare the list of update operations
+    const updateOperations = modelData.map((document) => ({
+      updateOne: {
+        filter: { hash: document.hash }, // Check for existing documents with the same hash
+        update: { $set: document },
+        upsert: true,
+      },
+    }));
+
+    await this.transactionRepo.bulkWrite(updateOperations);
   }
 }

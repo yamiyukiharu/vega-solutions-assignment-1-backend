@@ -18,34 +18,40 @@ export class TxPrice {
   usdt: string;
 }
 
-@Schema({ collection: 'transaction'})
+@Schema({ collection: 'transaction' })
 export class Transaction {
   @Prop()
   _id: string;
 
-  @Prop({unique: true, index: true})
+  @Prop({ unique: true, index: true, required: true })
   @ApiProperty()
   hash: string;
 
-  @Prop()
+  @Prop({ required: true })
   @ApiProperty()
   protocol: Protocol;
 
-  @Prop()
+  @Prop({ required: true })
   @ApiProperty()
   pool: Pool;
 
   @Prop(TxFee)
+  @Prop({ required: true })
   @ApiProperty()
   fee: TxFee;
 
   @Prop(TxPrice)
+  @Prop({ required: true })
   @ApiProperty()
   price: TxPrice;
 
-  @Prop()
+  @Prop({ required: true })
   @ApiProperty()
   timestamp: number;
+
+  @Prop({ required: true })
+  @ApiProperty()
+  blockNumber: number;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
