@@ -12,12 +12,14 @@ import {
   Query,
   Res,
   UseInterceptors,
+  applyDecorators,
 } from '@nestjs/common';
 import { TransactionService } from '../services/Transaction.service';
 import {
   GenerateReportRequest,
   GetTransactionRequest,
   GetTransactionResponse,
+  GetReportStatusResponse,
 } from '../dtos/transaction.dto';
 import {
   ApiAcceptedResponse,
@@ -29,12 +31,31 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 
-export type GetTxByIdQuery = {
-  protocol: string;
-  pool: string;
-  hash?: string;
-  page?: number;
-  limit?: number;
+export const ApiGetTransactions = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get a list of transactions based on protocol and pool',
+    }),
+    ApiOkResponse({ type: GetTransactionResponse }),
+    ApiNotFoundResponse({
+      description: 'Transaction with hash ${hash} not found',
+    }),
+  );
+};
+
+export const ApiGenerateReport = () => {
+  return applyDecorators(
+    ApiAcceptedResponse({
+      description: 'Report generation has been triggered',
+    }),
+    ApiOperation({
+      summary: 'Generate a report for transactions based on protocol and pool',
+    }),
+    ApiHeader({
+      name: 'Location',
+      description: 'The endpoint to check the status of the report generation',
+    }),
+  );
 };
 
 @Controller('v1/transactions')
@@ -44,14 +65,8 @@ export class TransactionController {
 
   @Get()
   @UseInterceptors(ClassSerializerInterceptor)
-  @ApiOperation({
-    summary: 'Get a list of transactions based on protocol and pool',
-  })
-  @ApiOkResponse({ type: GetTransactionResponse })
-  @ApiNotFoundResponse({
-    description: 'Transaction with hash ${hash} not found',
-  })
-  async getTransactionById(
+  @ApiGetTransactions()
+  async getTransactions(
     @Query() getTrancsactionDto: GetTransactionRequest,
   ): Promise<GetTransactionResponse> {
     const { hash, protocol, pool, page, limit } = getTrancsactionDto;
@@ -92,19 +107,10 @@ export class TransactionController {
     };
   }
 
-  @Post('report')
+  @Post('reports')
   @HttpCode(HttpStatus.ACCEPTED)
   @Header('Retry-After', '5')
-  // ====== Swagger decorators =======
-  @ApiAcceptedResponse({ description: 'Report generation has been triggered' })
-  @ApiOperation({
-    summary: 'Generate a report for transactions based on protocol and pool',
-  })
-  @ApiHeader({
-    name: 'Location',
-    description: 'The endpoint to check the status of the report generation',
-  })
-  // =================================
+  @ApiGenerateReport()
   async generateReport(
     @Query() generateReportRequest: GenerateReportRequest,
     @Res() res: Response,
@@ -125,6 +131,34 @@ export class TransactionController {
       );
     }
 
-    return res.header('Location', `/v1/transactions/report/${id}`).json();
+    return res
+      .header('Location', `/v1/transactions/reports/status/${id}`)
+      .json();
   }
+
+  @Get('reports/status/:id')
+
+  async getReportStatus(
+    @Param('id') id: string,
+  ): Promise<GetReportStatusResponse> {
+    const status = await this.transactionService.getReportStatus(id);
+
+    if (!status) {
+      throw new NotFoundException(`Report with id ${id} not found`);
+    }
+
+    return { status };
+  }
+
+  // @Get('reports/:id')
+  // @ApiOkResponse({ description: 'Report generation status' })
+  // async getReport(@Param('id') id: string) {
+  //   const report = await this.transactionService.getReport(id);
+
+  //   if (!report) {
+  //     throw new NotFoundException(`Report with id ${id} not found`);
+  //   }
+
+  //   return report;
+  // }
 }

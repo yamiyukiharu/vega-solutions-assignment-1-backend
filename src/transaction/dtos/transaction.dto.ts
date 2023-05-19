@@ -83,6 +83,6 @@ export class GenerateReportRequest {
   endTime: string;
 }
 
-export class ReportStatusResponse extends PickType(TransactionReport, [
+export class GetReportStatusResponse extends PickType(TransactionReport, [
   'status',
 ] as const) {}

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from '../models/Transaction.model';
-import { ObjectId, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
+import { ObjectId } from 'mongodb';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TransactionReport } from '../models/TransactionReport.model';
 import { InjectQueue } from '@nestjs/bull';
@@ -71,6 +72,11 @@ export class TransactionService {
 
   async updateReportStatus(id: ObjectId, status: ReportStatus) {
     await this.reportRepo.update(id, { status });
+  }
+
+  async getReportStatus(id: string): Promise<ReportStatus> {
+    const report = await this.reportRepo.findOneBy({ _id: new ObjectId(id) });
+    return report.status;
   }
 
   async recordTransactionsWithRange(
