@@ -110,6 +110,7 @@ export class TransactionController {
     @Res() res: Response,
   ) {
     const { protocol, pool, startTime, endTime } = generateReportRequest;
+
     const id = await this.transactionService.triggerReportGeneration(
       protocol,
       pool,
