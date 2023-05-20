@@ -1,4 +1,5 @@
 import {
+  Body,
   ClassSerializerInterceptor,
   Controller,
   Get,
@@ -114,7 +115,7 @@ export class TransactionController {
   @Header('Retry-After', '5')
   @ApiGenerateReport()
   async generateReport(
-    @Query() generateReportRequest: GenerateReportRequest,
+    @Body() generateReportRequest: GenerateReportRequest,
     @Res() res: Response,
   ) {
     const { protocol, pool, startTime, endTime } = generateReportRequest;
