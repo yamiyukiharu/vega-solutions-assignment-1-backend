@@ -33,6 +33,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 
 export const ApiGetTransactions = () => {
   return applyDecorators(
@@ -140,6 +141,7 @@ export class TransactionController {
   }
 
   @Get('reports/status/:id')
+  @Throttle(120, 60)
   async getReportStatus(
     @Param('id') id: string,
   ): Promise<GetReportStatusResponse> {
