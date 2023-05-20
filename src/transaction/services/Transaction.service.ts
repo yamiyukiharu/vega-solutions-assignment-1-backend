@@ -51,7 +51,8 @@ export class TransactionService {
         pool,
       })
       .skip(page * limit)
-      .limit(limit);
+      .limit(limit)
+      .sort({ timestamp: -1 });;
     return val;
   }
 
