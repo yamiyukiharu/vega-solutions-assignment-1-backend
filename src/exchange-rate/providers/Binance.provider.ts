@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { IExchangeRateProvider } from './IExchangeRate.provider';
 import { HttpService } from '@nestjs/axios';
-import * as dayjs from 'dayjs';
 import { GetHistoricalRateOptions, HistoricalDataResult } from '../types';
+import { retryOnFail } from 'src/utils/retry';
 
 @Injectable()
 export class BinanceProvider extends IExchangeRateProvider {
-  private readonly url = 'https://api.binance.com';
+  private readonly url = 'https://data.binance.com';
 
   constructor(private readonly httpService: HttpService) {
     super();
@@ -30,7 +30,7 @@ export class BinanceProvider extends IExchangeRateProvider {
   async getHistoricalRates(
     options: GetHistoricalRateOptions,
   ): Promise<HistoricalDataResult[]> {
-    const { from, to, start, end } = options;
+    const { from, to, startTimestamp, endTimestamp } = options;
     const symbol = this.getPairSymbol(from, to);
 
     const query = {
@@ -39,17 +39,21 @@ export class BinanceProvider extends IExchangeRateProvider {
       limit: '1000',
     };
 
-    start && (query['startTime'] = dayjs(start).unix() * 1000);
-    end && (query['endTime'] = dayjs(end).unix() * 1000);
+    startTimestamp && (query['startTime'] = startTimestamp * 1000);
+    endTimestamp && (query['endTime'] = endTimestamp * 1000);
 
     const url = new URL(this.url);
     url.pathname = 'api/v3/klines';
     url.search = new URLSearchParams(query).toString();
 
-    const response = await this.httpService.axiosRef.get(url.toString());
+    const request = async () => {
+      return await this.httpService.axiosRef.get(url.toString());
+    };
+
+    const response = await retryOnFail(request, 3);
 
     return response.data.map((item) => ({
-      time: new Date(item[0]),
+      timestamp: parseInt(item[0]) / 1000,
       value: item[4], // lowest price
     }));
   }

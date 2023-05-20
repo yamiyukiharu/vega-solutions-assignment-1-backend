@@ -27,8 +27,9 @@ export type TheGraphResponse = {
 
 @Injectable()
 export class TheGraphUniswapV3Provider extends ITransactionProvider {
-  private readonly url = 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3';
-  
+  private readonly url =
+    'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3';
+
   constructor(private readonly httpService: HttpService) {
     super();
   }
@@ -42,6 +43,7 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
       limit = 100,
       startTime,
       endTime,
+      sort = 'asc',
     } = options;
 
     const skip = page * limit;
@@ -60,7 +62,7 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
         first: ${limit},
         skip: ${skip},
         orderBy: timestamp,
-        orderDirection: desc,
+        orderDirection: ${sort},
         ${whereClause},
       ) {
         amount0
@@ -94,7 +96,7 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
 
       return {
         id,
-        timestamp,
+        timestamp: parseInt(timestamp),
         blockNumber: parseInt(blockNumber),
         fee: BigNumber(gasUsed).multipliedBy(gasPrice).toString(),
         swapPrice: BigNumber(amount0)

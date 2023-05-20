@@ -24,7 +24,7 @@ export type EtherscanResponse = {
 @Injectable()
 export class EtherscanProvider extends ITransactionProvider {
   private readonly url = 'https://api.etherscan.io/api';
-  
+
   constructor(
     private readonly httpService: HttpService,
     private configService: ConfigService,
@@ -59,8 +59,8 @@ export class EtherscanProvider extends ITransactionProvider {
 
     let url = new URL(this.url);
     url.search = new URLSearchParams({
-      module: "account",
-      action: "tokentx",
+      module: 'account',
+      action: 'tokentx',
       address: address,
       contractAddress: contractAddress,
       page: offset.toString(),
@@ -75,11 +75,9 @@ export class EtherscanProvider extends ITransactionProvider {
       url.toString(),
     );
 
-    console.log(url.toString());
-
     return data.result.map((tx) => ({
       id: tx.hash,
-      timestamp: tx.timeStamp,
+      timestamp: parseInt(tx.timeStamp),
       blockNumber: parseInt(tx.blockNumber),
       fee: new BigNumber(tx.gasPrice).multipliedBy(tx.gasUsed).toString(),
     }));

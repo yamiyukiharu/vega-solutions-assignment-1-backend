@@ -1,21 +1,22 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TransactionsRecordingTask } from '../tasks/TransactionsRecording.task';
-import { TransactionService } from '../services/Transaction.service';
+import { TransactionsRecordingTask } from './transaction/tasks/TransactionsRecording.task';
+import { TransactionService } from './transaction/services/Transaction.service';
 import { AppConfigModule } from 'src/common/modules/AppConfig.module';
 import { DatabaseModule } from 'src/common/modules/Database.module';
-import { ITransactionProvider } from '../providers/ITransaction.provider';
-import { EtherscanProvider } from '../providers/Etherscan.provider';
+import { ITransactionProvider } from './transaction/providers/ITransaction.provider';
+import { EtherscanProvider } from './transaction/providers/Etherscan.provider';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   TransactionReport,
   TransactionReportSchema,
-} from '../models/TransactionReport.model';
-import { Transaction, TransactionSchema } from '../models/Transaction.model';
+} from './transaction/models/TransactionReport.model';
+import { Transaction, TransactionSchema } from './transaction/models/Transaction.model';
 import { QueueModule } from 'src/common/modules/Queue.module';
 import { HttpModule } from '@nestjs/axios';
 import { IExchangeRateProvider } from 'src/exchange-rate/providers/IExchangeRate.provider';
 import { BinanceProvider } from 'src/exchange-rate/providers/Binance.provider';
+import { ExchangeRateService } from './exchange-rate/services/ExchangeRate.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { BinanceProvider } from 'src/exchange-rate/providers/Binance.provider';
   ],
   providers: [
     TransactionService,
+    ExchangeRateService,
     TransactionsRecordingTask,
     {
       provide: ITransactionProvider,

@@ -1,13 +1,13 @@
 import { Currency } from "src/common/enums";
 
 export type HistoricalDataResult = {
-  time: Date;
+  timestamp: number; // unix timestamp
   value: string;
 };
 
 export type GetHistoricalRateOptions = {
   from: Currency;
   to: Currency;
-  start?: Date;
-  end?: Date;
+  startTimestamp?: number;
+  endTimestamp?: number;
 };

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Transaction } from '../models/Transaction.model';
 import { ObjectId } from 'mongodb';
-import { Pool, Protocol, ReportStatus } from 'src/common/enums';
+import { Currency, Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TransactionReport } from '../models/TransactionReport.model';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -14,6 +14,8 @@ import BigNumber from 'bignumber.js';
 import { GetReportResponse } from '../dtos/transaction.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { ExchangeRateService } from 'src/exchange-rate/services/ExchangeRate.service';
+import { HistoricalDataResult } from 'src/exchange-rate/types';
 
 @Injectable()
 export class TransactionService {
@@ -24,6 +26,7 @@ export class TransactionService {
     private reportRepo: Model<TransactionReport>,
     @InjectQueue('transactions-report') private reportQueue: Queue,
     private uniswapV3Provider: ITransactionProvider,
+    private exchangeRateService: ExchangeRateService,
   ) {}
 
   async getTransactionByHash(
@@ -135,6 +138,7 @@ export class TransactionService {
         limit,
         startTime,
         endTime,
+        sort: 'asc',
       });
 
       totalFeeEth = totalFeeEth.plus(
@@ -168,10 +172,16 @@ export class TransactionService {
   async recordNewTransactions(protocol: Protocol, pool: Pool) {
     const provider = this.getProvider(protocol);
 
-    const savedLatestBlock = await this.transactionRepo
-      .find({})
-      .sort({ blockNumber: -1 })
-      .limit(1);
+    const isDbEmpty = (await this.transactionRepo.countDocuments()) === 0;
+
+    const latestBlock = isDbEmpty
+      ? await provider.getTransactions({
+          pool,
+          page: 0,
+          limit: 1,
+          sort: 'desc',
+        })
+      : await this.transactionRepo.find({}).sort({ blockNumber: -1 }).limit(1);
 
     const limit = 1000;
     let page = 0;
@@ -181,7 +191,8 @@ export class TransactionService {
         pool,
         page: 0,
         limit: 1000,
-        startBlock: savedLatestBlock ? savedLatestBlock[0].blockNumber : 0,
+        startBlock: latestBlock[0].blockNumber,
+        sort: 'asc',
       });
 
       await this.saveTransactionsFromProvider(protocol, pool, data);
@@ -211,12 +222,12 @@ export class TransactionService {
     pool: Pool,
     data: GetTransactionResult[],
   ) {
-    const modelData: Partial<Transaction>[] = data.map((item) => {
+    let transactions: Partial<Transaction>[] = data.map((item) => {
       return {
         hash: item.id,
         protocol,
         pool,
-        timestamp: parseInt(item.timestamp),
+        timestamp: item.timestamp,
         fee: {
           eth: item.fee,
           usdt: item.fee,
@@ -225,8 +236,10 @@ export class TransactionService {
       };
     });
 
+    transactions = await this.addFeesInUsdt(transactions);
+
     // Prepare the list of update operations
-    const updateOperations = modelData.map((document) => ({
+    const updateOperations = transactions.map((document) => ({
       updateOne: {
         filter: { hash: document.hash }, // Check for existing documents with the same hash
         update: { $set: document },
@@ -235,5 +248,54 @@ export class TransactionService {
     }));
 
     await this.transactionRepo.bulkWrite(updateOperations);
+  }
+
+  private async addFeesInUsdt(
+    transactions: Partial<Transaction>[],
+  ): Promise<Partial<Transaction>[]> {
+    const output: Partial<Transaction>[] = [];
+    let rates = await this.exchangeRateService.getHistoricalRates({
+      from: Currency.ETH,
+      to: Currency.USDT,
+      startTimestamp: transactions[0].timestamp,
+    });
+
+    for (const transaction of transactions) {
+      // Find the exchange rate with the closest matching timestamp
+      let rateIdx = rates.findIndex((rate) => {
+        return rate.timestamp >= transaction.timestamp;
+      });
+
+      while (rateIdx === -1) {
+        rates = await this.exchangeRateService.getHistoricalRates({
+          from: Currency.ETH,
+          to: Currency.USDT,
+          startTimestamp: rates[rates.length - 1].timestamp,
+        });
+
+        rateIdx = rates.findIndex((rate) => {
+          return rate.timestamp >= transaction.timestamp;
+        });
+      }
+
+      const rate = rates[rateIdx].value;
+
+      rates = rates.slice(rateIdx);
+
+      const feeUsdt = BigNumber(transaction.fee.eth)
+        .dividedBy(1e18) // Convert from wei to eth
+        .multipliedBy(rate)
+        .toString();
+
+      output.push({
+        ...transaction,
+        fee: {
+          eth: transaction.fee.eth,
+          usdt: feeUsdt,
+        },
+      });
+    }
+
+    return output;
   }
 }

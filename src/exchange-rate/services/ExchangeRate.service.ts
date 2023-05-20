@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IExchangeRateProvider } from '../providers/IExchangeRate.provider';
 import { Currency } from 'src/common/enums';
-import { GetHistoricalRateOptions } from '../types';
+import { GetHistoricalRateOptions, HistoricalDataResult } from '../types';
 
 @Injectable()
 export class ExchangeRateService {
@@ -11,13 +11,11 @@ export class ExchangeRateService {
     return await this.exchangeRateProvider.convert(from, to);
   }
 
-  async getHistoricalRates(options: GetHistoricalRateOptions): Promise<any> {
-    const { from, to, start, end } = options;
-    return await this.exchangeRateProvider.getHistoricalRates({
-      from,
-      to,
-      start,
-      end,
-    });
+  // returns data in ascending order (oldest first)
+  async getHistoricalRates(
+    options: GetHistoricalRateOptions,
+  ): Promise<HistoricalDataResult[]> {
+    const { from, to, startTimestamp, endTimestamp } = options;
+    return await this.exchangeRateProvider.getHistoricalRates(options);
   }
 }

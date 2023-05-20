@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { TaskModule } from './transaction/modules/Task.module';
+import { TaskModule } from './Task.module';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(TaskModule);

@@ -13,9 +13,9 @@ export type GetTransactionOptions = {
 
 export type GetTransactionResult = {
   id: string;
-  timestamp: string;
+  timestamp: number;
   blockNumber: number;
-  fee: string; // in gwei
+  fee: string; // in wei
 };
 
 export abstract class ITransactionProvider {

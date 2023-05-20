@@ -9,10 +9,11 @@ export class TransactionsRecordingTask {
 
   @Interval(5000) // runs every 5 seconds
   async recordNewTransactions() {
+    console.log('recording new transactions...');
     await this.transactionService.recordNewTransactions(
       Protocol.UNISWAPV3,
       Pool.ETH_USDC,
     );
-    console.log('getNewTransactionRecords');
+    console.log('finished!');
   }
 }

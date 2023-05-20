@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TransactionService can record new transactions 1`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 1,
+    "fee": {
+      "eth": "22921930374619520",
+      "usdt": "41.259474674315136",
+    },
+    "hash": "0x1",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 1,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 2,
+    "fee": {
+      "eth": "14691703394596320",
+      "usdt": "26.45975781366797232",
+    },
+    "hash": "0x2",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 2,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 3,
+    "fee": {
+      "eth": "14691703394596320",
+      "usdt": "29.44217360277102528",
+    },
+    "hash": "0x3",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 5,
+  },
+]
+`;
