@@ -103,7 +103,8 @@ export class TransactionService {
         },
       })
       .skip(page * limit)
-      .limit(limit);
+      .limit(limit)
+      .sort({ timestamp: -1 });
 
     // sum of all fee.eth
     return {
