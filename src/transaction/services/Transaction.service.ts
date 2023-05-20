@@ -11,12 +11,13 @@ import {
 } from '../providers/ITransaction.provider';
 import * as dayjs from 'dayjs';
 import BigNumber from 'bignumber.js';
-import { GetReportResponse } from '../dtos/transaction.dto';
+import { GetReportResponse, TransactionResult } from '../dtos/transaction.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ExchangeRateService } from 'src/exchange-rate/services/ExchangeRate.service';
 import { HistoricalDataResult } from 'src/exchange-rate/types';
 import { REPORTS_QUEUE } from 'src/common/constants';
+import { omit } from 'lodash';
 
 @Injectable()
 export class TransactionService {
@@ -34,9 +35,9 @@ export class TransactionService {
     hash: string,
     protocol: Protocol,
     pool: Pool,
-  ): Promise<Transaction | null> {
+  ): Promise<TransactionResult | null> {
     const val = await this.transactionRepo.findOne({ hash, protocol, pool });
-    return val ? val.toObject() : null;
+    return val ? omit(val.toObject(), ['_id']) : null;
   }
 
   async getTransactionList(
@@ -44,7 +45,7 @@ export class TransactionService {
     pool: Pool,
     page: number,
     limit: number,
-  ): Promise<Transaction[]> {
+  ): Promise<TransactionResult[]> {
     const val = await this.transactionRepo
       .find({
         protocol,
@@ -52,8 +53,8 @@ export class TransactionService {
       })
       .skip(page * limit)
       .limit(limit)
-      .sort({ timestamp: -1 });;
-    return val;
+      .sort({ timestamp: -1 });
+    return val.map((item) => omit(item.toObject(), ['_id']));
   }
 
   async getTransactionCount(protocol: Protocol, pool: Pool): Promise<number> {
@@ -110,7 +111,7 @@ export class TransactionService {
       limit,
       totalFee,
       total: count,
-      data: transactions,
+      data: transactions.map((item) => omit(item.toObject(), ['_id'])),
     };
   }
 

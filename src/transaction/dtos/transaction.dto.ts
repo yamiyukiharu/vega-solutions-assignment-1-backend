@@ -1,4 +1,4 @@
-import { Transform } from 'class-transformer';
+import { Exclude, Transform } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
@@ -12,12 +12,12 @@ import { Pool, Protocol } from 'src/common/enums';
 import {
   ApiResponse,
   ApiResponseProperty,
-  OmitType,
   PickType,
 } from '@nestjs/swagger';
-import { Transaction } from '../models/Transaction.model';
+import { Transaction, TxFee } from '../models/Transaction.model';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionReport } from '../models/TransactionReport.model';
+import { ObjectId } from 'mongoose';
 
 export class GetTransactionRequest {
   @Matches(/^0x([A-Fa-f0-9]+)$/, {
@@ -49,7 +49,26 @@ export class GetTransactionRequest {
   limit?: number = 10;
 }
 
-export class TransactionResult extends Transaction {}
+export class TransactionResult {
+  @ApiProperty()
+  hash: string;
+
+  @ApiProperty()
+  protocol: Protocol;
+
+  @ApiProperty()
+  pool: Pool;
+
+  @ApiProperty()
+  fee: TxFee;
+
+  @ApiProperty()
+  timestamp: number;
+
+  @ApiProperty()
+  blockNumber: number;
+}
+
 export class GetTransactionResponse {
   @ApiPropertyOptional()
   page?: number;

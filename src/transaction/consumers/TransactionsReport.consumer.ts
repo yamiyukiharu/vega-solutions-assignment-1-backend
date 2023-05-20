@@ -11,6 +11,8 @@ export class TransactionsReportConsumer {
 
   @Process()
   async createReport(job: Job<{ id: string }>) {
+    console.log('processing report...');
     await this.transactionService.processReport(job.data.id);
+    console.log('finished!');
   }
 }

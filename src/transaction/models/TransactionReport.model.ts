@@ -20,11 +20,11 @@ export class TransactionReport {
 
   @Prop()
   @ApiProperty()
-  startTimestamp: string;
+  startTimestamp: number;
 
   @Prop()
   @ApiProperty()
-  endTimestamp: string;
+  endTimestamp: number;
 
   @Prop()
   @ApiProperty()

@@ -162,7 +162,7 @@ describe('TransactionService', () => {
       const result = await service.getTransactionByHash('0x1', protocol, pool);
 
       // Assert
-      expect(result).toEqual(doc.toObject());
+      expect(result).toMatchSnapshot();
     });
 
     it('should return null if no transaction is found', async () => {
@@ -201,8 +201,7 @@ describe('TransactionService', () => {
       const result = await service.getTransactionList(protocol, pool, 0, 5);
 
       // Assert
-      const sanitizedResult = sanitizeDocuments(result);
-      expect(sanitizedResult).toMatchSnapshot();
+      expect(result).toMatchSnapshot();
     });
   });
 
@@ -398,15 +397,7 @@ describe('TransactionService', () => {
       const result = await service.getReport(id, 0, 10);
 
       // Assert
-      const sanitizedData = sanitizeDocuments(result.data);
-      expect(sanitizedData).toMatchSnapshot();
-      expect(result.total).toEqual(2);
-      expect(result.page).toEqual(0);
-      expect(result.limit).toEqual(10);
-      expect(result.totalFee).toEqual({
-        eth: '200000000000000000',
-        usdt: '200',
-      });
+      expect(result).toMatchSnapshot();
     });
   });
 });

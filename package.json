@@ -39,6 +39,7 @@
     "class-validator": "^0.14.0",
     "dayjs": "^1.11.7",
     "graphql": "^15.8.0",
+    "lodash": "^4.17.21",
     "mongodb": "^5.5.0",
     "mongoose": "^7.1.2",
     "reflect-metadata": "^0.1.13",

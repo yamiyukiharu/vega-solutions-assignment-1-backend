@@ -1,41 +1,62 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`TransactionService getReport should return a report 1`] = `
-[
-  {
-    "__v": undefined,
-    "_id": undefined,
-    "blockNumber": 2,
-    "fee": {
-      "eth": "100000000000000000",
-      "usdt": "100",
+{
+  "data": [
+    {
+      "__v": 0,
+      "blockNumber": 2,
+      "fee": {
+        "eth": "100000000000000000",
+        "usdt": "100",
+      },
+      "hash": "0x2",
+      "pool": "eth_usdc",
+      "protocol": "uniswapv3",
+      "timestamp": 2,
     },
-    "hash": "0x2",
-    "pool": "eth_usdc",
-    "protocol": "uniswapv3",
-    "timestamp": 2,
-  },
-  {
-    "__v": undefined,
-    "_id": undefined,
-    "blockNumber": 3,
-    "fee": {
-      "eth": "100000000000000000",
-      "usdt": "100",
+    {
+      "__v": 0,
+      "blockNumber": 3,
+      "fee": {
+        "eth": "100000000000000000",
+        "usdt": "100",
+      },
+      "hash": "0x3",
+      "pool": "eth_usdc",
+      "protocol": "uniswapv3",
+      "timestamp": 3,
     },
-    "hash": "0x3",
-    "pool": "eth_usdc",
-    "protocol": "uniswapv3",
-    "timestamp": 3,
+  ],
+  "limit": 10,
+  "page": 0,
+  "total": 2,
+  "totalFee": {
+    "eth": "200000000000000000",
+    "usdt": "200",
   },
-]
+}
+`;
+
+exports[`TransactionService getTransactions should return transactions for a given protocol and pool 1`] = `
+{
+  "__v": 0,
+  "blockNumber": 1,
+  "fee": {
+    "eth": "100000000000000000",
+    "usdt": "100",
+  },
+  "hash": "0x1",
+  "pool": "eth_usdc",
+  "protocol": "uniswapv3",
+  "timestamp": 1,
+}
 `;
 
 exports[`TransactionService getTransactionsList should return transactions for a given protocol and pool 1`] = `
 [
   {
-    "__v": undefined,
-    "_id": undefined,
+    "__v": 0,
     "blockNumber": 9,
     "fee": {
       "eth": "100000000000000000",
@@ -47,8 +68,7 @@ exports[`TransactionService getTransactionsList should return transactions for a
     "timestamp": 9,
   },
   {
-    "__v": undefined,
-    "_id": undefined,
+    "__v": 0,
     "blockNumber": 8,
     "fee": {
       "eth": "100000000000000000",
@@ -60,8 +80,7 @@ exports[`TransactionService getTransactionsList should return transactions for a
     "timestamp": 8,
   },
   {
-    "__v": undefined,
-    "_id": undefined,
+    "__v": 0,
     "blockNumber": 7,
     "fee": {
       "eth": "100000000000000000",
@@ -73,8 +92,7 @@ exports[`TransactionService getTransactionsList should return transactions for a
     "timestamp": 7,
   },
   {
-    "__v": undefined,
-    "_id": undefined,
+    "__v": 0,
     "blockNumber": 6,
     "fee": {
       "eth": "100000000000000000",
@@ -86,8 +104,7 @@ exports[`TransactionService getTransactionsList should return transactions for a
     "timestamp": 6,
   },
   {
-    "__v": undefined,
-    "_id": undefined,
+    "__v": 0,
     "blockNumber": 5,
     "fee": {
       "eth": "100000000000000000",
@@ -106,10 +123,10 @@ exports[`TransactionService processReport should update report status to COMPLET
   "__v": Any<Number>,
   "_id": Any<Object>,
   "count": 3,
-  "endTimestamp": "1609545600",
+  "endTimestamp": 1609545600,
   "pool": "eth_usdc",
   "protocol": "uniswapv3",
-  "startTimestamp": "1609459200",
+  "startTimestamp": 1609459200,
   "status": "completed",
   "totalFee": {
     "eth": "52305337163812160",
@@ -166,10 +183,10 @@ exports[`TransactionService processReport should update report status to FAILED 
 {
   "__v": Any<Number>,
   "_id": Any<Object>,
-  "endTimestamp": "1609545600",
+  "endTimestamp": 1609545600,
   "pool": "eth_usdc",
   "protocol": "uniswapv3",
-  "startTimestamp": "1609459200",
+  "startTimestamp": 1609459200,
   "status": "failed",
 }
 `;
@@ -222,10 +239,10 @@ exports[`TransactionService triggerReportGeneration should create a report and a
 {
   "__v": Any<Number>,
   "_id": Any<Object>,
-  "endTimestamp": "1641081600",
+  "endTimestamp": 1641081600,
   "pool": "eth_usdc",
   "protocol": "uniswapv3",
-  "startTimestamp": "1640995200",
+  "startTimestamp": 1640995200,
   "status": "pending",
 }
 `;
