@@ -12,3 +12,8 @@ export enum ReportStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
 }
+
+export enum Currency {
+  ETH = 'eth',
+  USDT = 'usdt',
+}

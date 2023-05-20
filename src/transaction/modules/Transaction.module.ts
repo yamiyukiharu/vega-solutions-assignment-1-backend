@@ -11,6 +11,7 @@ import { ITransactionProvider } from '../providers/ITransaction.provider';
 import { TheGraphUniswapV3Provider } from '../providers/TheGraphUniswapV3.provider';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DatabaseModule } from 'src/common/modules/Database.module';
+import { ExchangeRateModule } from 'src/exchange-rate/ExchangeRate.module';
 
 @Module({
   imports: [
@@ -28,7 +29,6 @@ import { DatabaseModule } from 'src/common/modules/Database.module';
   controllers: [TransactionController],
   providers: [
     TransactionService,
-    ExchangeRateService,
     {
       provide: ITransactionProvider,
       useClass: TheGraphUniswapV3Provider,

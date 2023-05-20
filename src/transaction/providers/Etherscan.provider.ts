@@ -23,7 +23,8 @@ export type EtherscanResponse = {
 
 @Injectable()
 export class EtherscanProvider extends ITransactionProvider {
-  private url = 'https://api.etherscan.io/api';
+  private readonly url = 'https://api.etherscan.io/api';
+  
   constructor(
     private readonly httpService: HttpService,
     private configService: ConfigService,

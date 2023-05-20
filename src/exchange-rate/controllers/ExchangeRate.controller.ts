@@ -1,4 +1,15 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
+import { GetExchangeRateDto } from '../dtos/ExchangeRate.dto';
+import { ExchangeRateService } from '../services/ExchangeRate.service';
+import { Currency } from 'src/common/enums';
 
-@Controller('exchange-rate')
-export class ExchangeRateController {}
+@Controller('v1/exchange-rate')
+export class ExchangeRateController {
+  constructor(private exchangeRateService: ExchangeRateService) {}
+
+  @Get()
+  async getExchangeRate(@Query() query: GetExchangeRateDto): Promise<number> {
+    const { from, to } = query;
+    return await this.exchangeRateService.getExchangeRate(from, to);
+  }
+}

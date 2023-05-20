@@ -14,6 +14,8 @@ import {
 import { Transaction, TransactionSchema } from '../models/Transaction.model';
 import { QueueModule } from 'src/common/modules/Queue.module';
 import { HttpModule } from '@nestjs/axios';
+import { IExchangeRateProvider } from 'src/exchange-rate/providers/IExchangeRate.provider';
+import { BinanceProvider } from 'src/exchange-rate/providers/Binance.provider';
 
 @Module({
   imports: [
@@ -36,6 +38,10 @@ import { HttpModule } from '@nestjs/axios';
       provide: ITransactionProvider,
       useClass: EtherscanProvider,
     },
+    {
+      provide: IExchangeRateProvider,
+      useClass: BinanceProvider,
+    }
   ],
 })
 export class TaskModule {}

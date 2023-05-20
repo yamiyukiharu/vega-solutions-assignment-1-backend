@@ -13,6 +13,8 @@ import {
 import { ITransactionProvider } from '../providers/ITransaction.provider';
 import { TheGraphUniswapV3Provider } from '../providers/TheGraphUniswapV3.provider';
 import { MongooseModule } from '@nestjs/mongoose';
+import { IExchangeRateProvider } from 'src/exchange-rate/providers/IExchangeRate.provider';
+import { BinanceProvider } from 'src/exchange-rate/providers/Binance.provider';
 
 @Module({
   imports: [
@@ -34,6 +36,10 @@ import { MongooseModule } from '@nestjs/mongoose';
       provide: ITransactionProvider,
       useClass: TheGraphUniswapV3Provider,
     },
+    {
+      provide: IExchangeRateProvider,
+      useClass: BinanceProvider,
+    }
   ],
 })
 export class WorkerModule {}

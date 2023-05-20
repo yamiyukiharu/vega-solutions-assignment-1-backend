@@ -27,7 +27,8 @@ export type TheGraphResponse = {
 
 @Injectable()
 export class TheGraphUniswapV3Provider extends ITransactionProvider {
-  private url = 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3';
+  private readonly url = 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3';
+  
   constructor(private readonly httpService: HttpService) {
     super();
   }
