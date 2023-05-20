@@ -135,8 +135,8 @@ export class TransactionController {
     }
 
     return res
-      .header('Location', `/v1/transactions/reports/status/${id}`)
-      .json();
+      .header('Location', `v1/transactions/reports/status/${id}`)
+      .json({ location: `v1/transactions/reports/status/${id}` });
   }
 
   @Get('reports/status/:id')
