@@ -19,12 +19,12 @@ export class TransactionReport {
   pool: Pool;
 
   @Prop()
-  @ApiProperty({ description: 'Start date in ISO8601 format' })
-  startTime: string;
+  @ApiProperty()
+  startTimestamp: string;
 
   @Prop()
-  @ApiProperty({ description: 'Start date in ISO8601 format' })
-  endTime: string;
+  @ApiProperty()
+  endTimestamp: string;
 
   @Prop()
   @ApiProperty()

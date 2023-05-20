@@ -4,8 +4,8 @@ export type GetTransactionOptions = {
   pool: Pool;
   page?: number;
   limit?: number;
-  startTime?: string;
-  endTime?: string;
+  startTimestamp?: string;
+  endTimestamp?: string;
   startBlock?: number;
   endBlock?: number;
   sort?: 'asc' | 'desc';

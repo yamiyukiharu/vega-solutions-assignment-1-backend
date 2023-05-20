@@ -1,5 +1,7 @@
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
+import { Exclude } from 'class-transformer';
+import { ObjectId } from 'mongoose';
 import { Pool, Protocol } from 'src/common/enums';
 
 export class TxFee {
@@ -10,19 +12,8 @@ export class TxFee {
   usdt: string;
 }
 
-export class TxPrice {
-  @ApiProperty()
-  eth: string;
-
-  @ApiProperty()
-  usdt: string;
-}
-
 @Schema({ collection: 'transaction' })
 export class Transaction {
-  @Prop()
-  _id: string;
-
   @Prop({ unique: true, index: true, required: true })
   @ApiProperty()
   hash: string;
@@ -39,11 +30,6 @@ export class Transaction {
   @Prop({ required: true })
   @ApiProperty()
   fee: TxFee;
-
-  @Prop(TxPrice)
-  @Prop({ required: true })
-  @ApiProperty()
-  price: TxPrice;
 
   @Prop({ required: true })
   @ApiProperty()

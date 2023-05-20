@@ -1,5 +1,14 @@
 export const mongoSnapshotIgnoreFields = {
   _id: expect.any(Object),
-  createdAt: expect.any(Date),
-  updatedAt: expect.any(Date),
+  __v: expect.any(Number),
+};
+
+export const sanitizeDocuments = (data) => {
+  return data.map((d) => {
+    return {
+      ...d.toObject(),
+      _id: undefined,
+      __v: undefined,
+    };
+  });
 };

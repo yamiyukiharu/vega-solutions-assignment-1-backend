@@ -16,6 +16,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ExchangeRateService } from 'src/exchange-rate/services/ExchangeRate.service';
 import { HistoricalDataResult } from 'src/exchange-rate/types';
+import { REPORTS_QUEUE } from 'src/common/constants';
 
 @Injectable()
 export class TransactionService {
@@ -24,7 +25,7 @@ export class TransactionService {
     private transactionRepo: Model<Transaction>,
     @InjectModel(TransactionReport.name)
     private reportRepo: Model<TransactionReport>,
-    @InjectQueue('transactions-report') private reportQueue: Queue,
+    @InjectQueue(REPORTS_QUEUE) private reportQueue: Queue,
     private uniswapV3Provider: ITransactionProvider,
     private exchangeRateService: ExchangeRateService,
   ) {}
@@ -70,17 +71,13 @@ export class TransactionService {
       status: ReportStatus.PENDING,
       protocol,
       pool,
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
+      startTimestamp: dayjs(startTime).unix(),
+      endTimestamp: dayjs(endTime).unix(),
     });
 
     await this.reportQueue.add({ id });
 
     return id;
-  }
-
-  async updateReportStatus(id: string, status: ReportStatus) {
-    await this.reportRepo.findByIdAndUpdate(id, { status });
   }
 
   async getReportStatus(id: string): Promise<ReportStatus | null> {
@@ -94,10 +91,7 @@ export class TransactionService {
     limit: number,
   ): Promise<GetReportResponse> {
     const report = await this.reportRepo.findById(id);
-    const { startTime, endTime, count, totalFee } = report;
-
-    const startTimestamp = dayjs(startTime).unix();
-    const endTimestamp = dayjs(endTime).unix();
+    const { startTimestamp, endTimestamp, count, totalFee } = report;
 
     const transactions = await this.transactionRepo
       .find({
@@ -121,52 +115,78 @@ export class TransactionService {
 
   async processReport(id: string) {
     const report = await this.reportRepo.findById(id);
-    const { protocol, pool, startTime, endTime } = report;
+    const { protocol, pool, startTimestamp, endTimestamp } = report;
 
-    const provider = this.getProvider(protocol);
-
-    const limit = 1000;
-    let page = 0;
-    let count = 0;
-    let totalFeeEth = BigNumber(0);
-    let totalFeeUsdt = BigNumber(0);
-
-    while (true) {
-      const data = await provider.getTransactions({
-        pool,
-        page,
-        limit,
-        startTime,
-        endTime,
-        sort: 'asc',
+    try {
+      await this.reportRepo.findByIdAndUpdate(id, {
+        status: ReportStatus.IN_PROGRESS,
       });
 
-      totalFeeEth = totalFeeEth.plus(
-        data.reduce((acc, item) => acc.plus(item.fee), BigNumber(0)),
-      );
+      const provider = this.getProvider(protocol);
 
-      totalFeeUsdt = totalFeeUsdt.plus(
-        data.reduce((acc, item) => acc.plus(item.fee), BigNumber(0)),
-      );
+      const limit = 1000;
+      let page = 0;
+      let count = 0;
+      let totalFeeEth = BigNumber(0);
+      let totalFeeUsdt = BigNumber(0);
 
-      await this.saveTransactionsFromProvider(protocol, pool, data);
+      while (true) {
+        const data = await provider.getTransactions({
+          pool,
+          page,
+          limit,
+          startTimestamp,
+          endTimestamp,
+          sort: 'asc',
+        });
 
-      page++;
-      count += data.length;
+        let transactions = await this.mapProviderResultToModel(
+          protocol,
+          pool,
+          data,
+        );
 
-      if (data.length < limit - 1) {
-        break;
+        transactions = await this.addFeesInUsdt(transactions);
+
+        await this.saveTransactionsFromProvider(transactions);
+
+        totalFeeEth = totalFeeEth.plus(
+          transactions.reduce(
+            (acc, item) => acc.plus(item.fee.eth),
+            BigNumber(0),
+          ),
+        );
+
+        totalFeeUsdt = totalFeeUsdt.plus(
+          transactions.reduce(
+            (acc, item) => acc.plus(item.fee.usdt),
+            BigNumber(0),
+          ),
+        );
+
+        page++;
+        count += data.length;
+
+        if (data.length < limit - 1) {
+          break;
+        }
       }
-    }
 
-    await this.reportRepo.findByIdAndUpdate(id, {
-      status: ReportStatus.COMPLETED,
-      count,
-      totalFee: {
-        eth: totalFeeEth.toString(),
-        usdt: totalFeeUsdt.toString(),
-      },
-    });
+      await this.reportRepo.findByIdAndUpdate(id, {
+        status: ReportStatus.COMPLETED,
+        count,
+        totalFee: {
+          eth: totalFeeEth.toString(),
+          usdt: totalFeeUsdt.toString(),
+        },
+      });
+    } catch (e) {
+      // TODO: Log error
+      console.log(e);
+      await this.reportRepo.findByIdAndUpdate(id, {
+        status: ReportStatus.FAILED,
+      });
+    }
   }
 
   async recordNewTransactions(protocol: Protocol, pool: Pool) {
@@ -195,7 +215,15 @@ export class TransactionService {
         sort: 'asc',
       });
 
-      await this.saveTransactionsFromProvider(protocol, pool, data);
+      let transactions = await this.mapProviderResultToModel(
+        protocol,
+        pool,
+        data,
+      );
+
+      transactions = await this.addFeesInUsdt(transactions);
+
+      await this.saveTransactionsFromProvider(transactions);
 
       page++;
 
@@ -217,12 +245,12 @@ export class TransactionService {
     return provider;
   }
 
-  private async saveTransactionsFromProvider(
+  private async mapProviderResultToModel(
     protocol: Protocol,
     pool: Pool,
     data: GetTransactionResult[],
-  ) {
-    let transactions: Partial<Transaction>[] = data.map((item) => {
+  ): Promise<Transaction[]> {
+    return data.map((item) => {
       return {
         hash: item.id,
         protocol,
@@ -235,11 +263,11 @@ export class TransactionService {
         blockNumber: item.blockNumber,
       };
     });
+  }
 
-    transactions = await this.addFeesInUsdt(transactions);
-
+  private async saveTransactionsFromProvider(data: Transaction[]) {
     // Prepare the list of update operations
-    const updateOperations = transactions.map((document) => ({
+    const updateOperations = data.map((document) => ({
       updateOne: {
         filter: { hash: document.hash }, // Check for existing documents with the same hash
         update: { $set: document },
@@ -251,9 +279,9 @@ export class TransactionService {
   }
 
   private async addFeesInUsdt(
-    transactions: Partial<Transaction>[],
-  ): Promise<Partial<Transaction>[]> {
-    const output: Partial<Transaction>[] = [];
+    transactions: Transaction[],
+  ): Promise<Transaction[]> {
+    const output: Transaction[] = [];
     let rates = await this.exchangeRateService.getHistoricalRates({
       from: Currency.ETH,
       to: Currency.USDT,

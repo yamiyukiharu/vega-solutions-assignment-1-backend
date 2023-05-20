@@ -41,18 +41,16 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
       pool,
       page = 0,
       limit = 100,
-      startTime,
-      endTime,
+      startTimestamp,
+      endTimestamp,
       sort = 'asc',
     } = options;
 
     const skip = page * limit;
     const poolAddress = this.getPoolAddress(pool);
-    const startTimestamp = dayjs(startTime).unix();
-    const endTimestamp = dayjs(endTime).unix();
 
     const whereClause =
-      startTime && endTime
+      startTimestamp && endTimestamp
         ? `where: { pool: "${poolAddress}", timestamp_gte: "${startTimestamp}", timestamp_lte: "${endTimestamp}" }`
         : `where: { pool: "${poolAddress}" }`;
 

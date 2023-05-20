@@ -1,0 +1,1 @@
+export const REPORTS_QUEUE = 'transactions-report';

@@ -49,10 +49,7 @@ export class GetTransactionRequest {
   limit?: number = 10;
 }
 
-export class TransactionResult extends OmitType(Transaction, [
-  '_id',
-] as const) {}
-
+export class TransactionResult extends Transaction {}
 export class GetTransactionResponse {
   @ApiPropertyOptional()
   page?: number;

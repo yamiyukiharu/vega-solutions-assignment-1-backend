@@ -1,6 +1,124 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`TransactionService can record new transactions 1`] = `
+exports[`TransactionService getReport should return a report 1`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 2,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x2",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 2,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 3,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x3",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 3,
+  },
+]
+`;
+
+exports[`TransactionService getTransactionsList should return transactions for a given protocol and pool 1`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 0,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x0",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 0,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 1,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x1",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 1,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 2,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x2",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 2,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 3,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x3",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 3,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 4,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x4",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 4,
+  },
+]
+`;
+
+exports[`TransactionService processReport should update report status to COMPLETED and set total fees 1`] = `
+{
+  "__v": Any<Number>,
+  "_id": Any<Object>,
+  "count": 3,
+  "endTimestamp": "1609545600",
+  "pool": "eth_usdc",
+  "protocol": "uniswapv3",
+  "startTimestamp": "1609459200",
+  "status": "completed",
+  "totalFee": {
+    "eth": "52305337163812160",
+    "usdt": "97.1614060907541336",
+  },
+}
+`;
+
+exports[`TransactionService processReport should update report status to COMPLETED and set total fees 2`] = `
 [
   {
     "__v": undefined,
@@ -42,4 +160,72 @@ exports[`TransactionService can record new transactions 1`] = `
     "timestamp": 5,
   },
 ]
+`;
+
+exports[`TransactionService processReport should update report status to FAILED if an error occurs 1`] = `
+{
+  "__v": Any<Number>,
+  "_id": Any<Object>,
+  "endTimestamp": "1609545600",
+  "pool": "eth_usdc",
+  "protocol": "uniswapv3",
+  "startTimestamp": "1609459200",
+  "status": "failed",
+}
+`;
+
+exports[`TransactionService recordNewTransactions can record new transactions 1`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 1,
+    "fee": {
+      "eth": "22921930374619520",
+      "usdt": "41.259474674315136",
+    },
+    "hash": "0x1",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 1,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 2,
+    "fee": {
+      "eth": "14691703394596320",
+      "usdt": "26.45975781366797232",
+    },
+    "hash": "0x2",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 2,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 3,
+    "fee": {
+      "eth": "14691703394596320",
+      "usdt": "29.44217360277102528",
+    },
+    "hash": "0x3",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 5,
+  },
+]
+`;
+
+exports[`TransactionService triggerReportGeneration should create a report and add it to the queue 1`] = `
+{
+  "__v": Any<Number>,
+  "_id": Any<Object>,
+  "endTimestamp": "1641081600",
+  "pool": "eth_usdc",
+  "protocol": "uniswapv3",
+  "startTimestamp": "1640995200",
+  "status": "pending",
+}
 `;

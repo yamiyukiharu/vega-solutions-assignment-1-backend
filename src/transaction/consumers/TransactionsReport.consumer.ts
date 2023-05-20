@@ -3,28 +3,14 @@ import { Job } from 'bull';
 import { TransactionReport } from '../models/TransactionReport.model';
 import { TransactionService } from '../services/Transaction.service';
 import { ReportStatus } from 'src/common/enums';
+import { REPORTS_QUEUE } from 'src/common/constants';
 
-@Processor('transactions-report')
+@Processor(REPORTS_QUEUE)
 export class TransactionsReportConsumer {
   constructor(private transactionService: TransactionService) {}
 
   @Process()
   async createReport(job: Job<{ id: string }>) {
-    await this.transactionService.updateReportStatus(
-      job.data.id,
-      ReportStatus.IN_PROGRESS,
-    );
-
-    try {
-      await this.transactionService.processReport(job.data.id);
-    } catch (e) {
-      await this.transactionService.updateReportStatus(
-        job.data.id,
-        ReportStatus.FAILED,
-      );
-      // TODO: Log error
-      console.log(e);
-      throw e;
-    }
+    await this.transactionService.processReport(job.data.id);
   }
 }
