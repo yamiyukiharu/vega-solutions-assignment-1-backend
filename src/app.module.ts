@@ -17,6 +17,8 @@ import { QueueModule } from './common/modules/Queue.module';
 import { ExchangeRateController } from './exchange-rate/controllers/ExchangeRate.controller';
 import { IExchangeRateProvider } from './exchange-rate/providers/IExchangeRate.provider';
 import { BinanceProvider } from './exchange-rate/providers/Binance.provider';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -24,6 +26,10 @@ import { BinanceProvider } from './exchange-rate/providers/Binance.provider';
     QueueModule,
     AppConfigModule,
     DatabaseModule,
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 10,
+    }),
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
     ]),
@@ -43,6 +49,10 @@ import { BinanceProvider } from './exchange-rate/providers/Binance.provider';
       provide: IExchangeRateProvider,
       useClass: BinanceProvider,
     },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    }
   ],
 })
 export class AppModule {}
