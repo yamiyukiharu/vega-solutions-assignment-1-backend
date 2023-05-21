@@ -38,6 +38,9 @@ services:
     depends_on:
       - mongodb
       - redis
+    environment:
+      - DB_URL=mongodb://root:example@mongodb:27017/vega?authSource=admin
+
   worker:
     container_name: vega-backend-worker
     build:
@@ -51,6 +54,9 @@ services:
     depends_on:
       - mongodb
       - redis
+    environment:
+      - DB_URL=mongodb://root:example@mongodb:27017/vega?authSource=admin
+
   task:
     container_name: vega-backend-task
     build:
@@ -64,6 +70,9 @@ services:
     depends_on:
       - mongodb
       - redis
+    environment:
+      - DB_URL=mongodb://root:example@mongodb:27017/vega?authSource=admin
+
 networks:
   webnet:
     driver: bridge
