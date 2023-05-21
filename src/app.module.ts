@@ -11,14 +11,21 @@ import {
   TransactionReport,
   TransactionReportSchema,
 } from './transaction/models/TransactionReport.model';
-import { Transaction, TransactionSchema } from './transaction/models/Transaction.model';
+import {
+  Transaction,
+  TransactionSchema,
+} from './transaction/models/Transaction.model';
 import { HttpModule } from '@nestjs/axios';
 import { QueueModule } from './common/modules/Queue.module';
 import { ExchangeRateController } from './exchange-rate/controllers/ExchangeRate.controller';
+import type { RedisClientOptions } from 'redis';
+import * as redisStore from 'cache-manager-redis-store';
+import { CacheModule } from '@nestjs/cache-manager';
 import { IExchangeRateProvider } from './exchange-rate/providers/IExchangeRate.provider';
 import { BinanceProvider } from './exchange-rate/providers/Binance.provider';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -29,6 +36,20 @@ import { APP_GUARD } from '@nestjs/core';
     ThrottlerModule.forRoot({
       ttl: 60,
       limit: 10,
+    }),
+    CacheModule.registerAsync({
+      imports: [AppConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        store: (await redisStore.redisStore({
+          socket: {
+            host: 'localhost', // default value
+            port: 6379, // default value
+          },
+          ttl: 4 // issue with cache-manager version, ttl in set() does not work
+        })) as any,
+      }),
+      isGlobal: true,
     }),
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
@@ -51,8 +72,8 @@ import { APP_GUARD } from '@nestjs/core';
     },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard
-    }
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
