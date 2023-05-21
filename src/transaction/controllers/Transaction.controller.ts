@@ -3,7 +3,6 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
-  Header,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -13,7 +12,6 @@ import {
   Query,
   Res,
   UseInterceptors,
-  applyDecorators,
 } from '@nestjs/common';
 import { TransactionService } from '../services/Transaction.service';
 import {
@@ -24,43 +22,15 @@ import {
   GetReportRequest,
   GetReportResponse,
 } from '../dtos/transaction.dto';
-import {
-  ApiAcceptedResponse,
-  ApiHeader,
-  ApiNotFoundResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
-
-export const ApiGetTransactions = () => {
-  return applyDecorators(
-    ApiOperation({
-      summary: 'Get a list of transactions based on protocol and pool',
-    }),
-    ApiOkResponse({ type: GetTransactionResponse }),
-    ApiNotFoundResponse({
-      description: 'Transaction with hash ${hash} not found',
-    }),
-  );
-};
-
-export const ApiGenerateReport = () => {
-  return applyDecorators(
-    ApiAcceptedResponse({
-      description: 'Report generation has been triggered',
-    }),
-    ApiOperation({
-      summary: 'Generate a report for transactions based on protocol and pool',
-    }),
-    ApiHeader({
-      name: 'Location',
-      description: 'The endpoint to check the status of the report generation',
-    }),
-  );
-};
+import {
+  ApiGenerateReport,
+  ApiGetReport,
+  ApiGetReportStatus,
+  ApiGetTransactions,
+} from '../services/decorators';
 
 @Controller('v1/transactions')
 @ApiTags('transactions')
@@ -113,12 +83,11 @@ export class TransactionController {
 
   @Post('reports')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Header('Retry-After', '5')
   @ApiGenerateReport()
   async generateReport(
     @Body() generateReportRequest: GenerateReportRequest,
     @Res() res: Response,
-  ) {
+  ): Promise<GenerateReportRequest> {
     const { protocol, pool, startTime, endTime } = generateReportRequest;
 
     const id = await this.transactionService.triggerReportGeneration(
@@ -135,13 +104,14 @@ export class TransactionController {
       );
     }
 
-    return res
-      .header('Location', `v1/transactions/reports/status/${id}`)
-      .json({ location: `v1/transactions/reports/status/${id}` });
+    return res.header('Location', `v1/transactions/reports/status/${id}`).json({
+      location: `v1/transactions/reports/status/${id}`,
+    }) as unknown as GenerateReportRequest;
   }
 
   @Get('reports/status/:id')
   @Throttle(120, 60)
+  @ApiGetReportStatus()
   async getReportStatus(
     @Param('id') id: string,
   ): Promise<GetReportStatusResponse> {
@@ -156,7 +126,7 @@ export class TransactionController {
 
   @Get('reports/:id')
   @UseInterceptors(ClassSerializerInterceptor)
-  @ApiOkResponse({ description: 'Report generation status' })
+  @ApiGetReport()
   async getReport(
     @Param('id') id: string,
     @Query() query: GetReportRequest,

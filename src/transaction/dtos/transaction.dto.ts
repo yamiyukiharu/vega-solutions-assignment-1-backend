@@ -9,11 +9,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
-import {
-  ApiResponse,
-  ApiResponseProperty,
-  PickType,
-} from '@nestjs/swagger';
+import { ApiResponse, ApiResponseProperty, PickType } from '@nestjs/swagger';
 import { Transaction, TxFee } from '../models/Transaction.model';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionReport } from '../models/TransactionReport.model';
@@ -123,13 +119,13 @@ export class GetReportResponse {
   @ApiProperty()
   pool: Pool;
 
-  @ApiProperty({enum: ReportStatus})
+  @ApiProperty({ enum: ReportStatus })
   status: ReportStatus;
 
-  @ApiProperty()
+  @ApiProperty({example: '1614556800'})
   startTimestamp: number;
 
-  @ApiProperty()
+  @ApiProperty({example: '1614556801'})
   endTimestamp: number;
 
   @ApiProperty()
@@ -147,6 +143,6 @@ export class GetReportResponse {
   @ApiProperty()
   total: number;
 
-  @ApiProperty()
+  @ApiProperty({ type: TransactionResult, isArray: true })
   data: TransactionResult[];
 }
