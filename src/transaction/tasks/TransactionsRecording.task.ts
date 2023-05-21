@@ -9,12 +9,13 @@ import { RECORD_QUEUE } from 'src/common/constants';
 @Processor(RECORD_QUEUE)
 export class TransactionsRecordingTask {
   private readonly logger = new Logger(TransactionsRecordingTask.name);
+  private readonly frequency = 10000; // 10 seconds
 
   constructor(
     @InjectQueue(RECORD_QUEUE) private taskQueue: Queue,
     private transactionService: TransactionService,
   ) {
-    this.taskQueue.add({}, {delay: 5000});
+    this.taskQueue.add({}, { delay: this.frequency });
   }
 
   @Process()
@@ -29,6 +30,6 @@ export class TransactionsRecordingTask {
     this.logger.log(
       `Finished recording new transactions for ${Protocol.UNISWAPV3} ${Pool.ETH_USDC}!`,
     );
-    await this.taskQueue.add({}, {delay: 5000}); 
+    await this.taskQueue.add({}, { delay: this.frequency });
   }
 }
