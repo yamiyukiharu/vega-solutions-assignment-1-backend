@@ -16,6 +16,7 @@ import { omit } from 'lodash';
 import { InjectModel } from '@nestjs/mongoose';
 import { InjectQueue } from '@nestjs/bull';
 import { REPORTS_QUEUE } from 'src/common/constants';
+import { RecordInterval } from '../models/RecordInterval.model';
 
 @Injectable()
 export class TransactionService {
@@ -27,6 +28,8 @@ export class TransactionService {
     @InjectModel(TransactionReport.name)
     private reportRepo: Model<TransactionReport>,
     @InjectQueue(REPORTS_QUEUE) private reportQueue: Queue,
+    @InjectModel(RecordInterval.name)
+    private intervalRepo: Model<RecordInterval>,
     private uniswapV3Provider: ITransactionProvider,
     private exchangeRateService: ExchangeRateService,
   ) {}
@@ -141,65 +144,120 @@ export class TransactionService {
         status: ReportStatus.IN_PROGRESS,
       });
 
-      const provider = this.getProvider(protocol);
+      const allIntervals = await this.intervalRepo.find({
+        protocol,
+        pool,
+      });
 
-      const limit = 1000;
-      let page = 0;
-      let count = 0;
-      let totalFeeEth = BigNumber(0);
-      let totalFeeUsdt = BigNumber(0);
+      const dataInDb =
+        allIntervals.findIndex(
+          (item) => item.start <= startTimestamp && item.end >= endTimestamp,
+        ) !== -1;
 
-      // TODO: Use cursor instead of pagination
-      while (true) {
-        const data = await provider.getTransactions({
-          pool,
-          page,
-          limit,
-          startTimestamp,
-          endTimestamp,
-          sort: 'asc',
+      if (dataInDb) {
+        this.logger.log(`Data is already in DB, skip getting data from API`);
+
+        const count = await this.transactionRepo.count({
+          timestamp: {
+            $gte: startTimestamp,
+            $lte: endTimestamp,
+          },
         });
 
-        let transactions = await this.mapProviderResultToModel(
+        const transactions = await this.transactionRepo.find({
+          timestamp: {
+            $gte: startTimestamp,
+            $lte: endTimestamp,
+          },
+        });
+
+        const totalFeeEth = transactions.reduce(
+          (acc, item) => acc.plus(item.fee.eth),
+          BigNumber(0),
+        );
+
+        const totalFeeUsdt = transactions.reduce(
+          (acc, item) => acc.plus(item.fee.usdt),
+          BigNumber(0),
+        );
+
+        await this.reportRepo.findByIdAndUpdate(id, {
+          status: ReportStatus.COMPLETED,
+          count,
+          totalFee: {
+            eth: totalFeeEth,
+            usdt: totalFeeUsdt,
+          },
+        });
+      } else {
+        const provider = this.getProvider(protocol);
+
+        const limit = 1000;
+        let page = 0;
+        let count = 0;
+        let totalFeeEth = BigNumber(0);
+        let totalFeeUsdt = BigNumber(0);
+
+        // TODO: Use cursor instead of pagination
+        while (true) {
+          const data = await provider.getTransactions({
+            pool,
+            page,
+            limit,
+            startTimestamp,
+            endTimestamp,
+            sort: 'asc',
+          });
+
+          let transactions = await this.mapProviderResultToModel(
+            protocol,
+            pool,
+            data,
+          );
+
+          transactions = await this.addFeesInUsdt(transactions);
+
+          await this.saveTransactionsFromProvider(transactions);
+
+          totalFeeEth = totalFeeEth.plus(
+            transactions.reduce(
+              (acc, item) => acc.plus(item.fee.eth),
+              BigNumber(0),
+            ),
+          );
+
+          totalFeeUsdt = totalFeeUsdt.plus(
+            transactions.reduce(
+              (acc, item) => acc.plus(item.fee.usdt),
+              BigNumber(0),
+            ),
+          );
+
+          page++;
+          count += data.length;
+
+          if (data.length < limit - 1) {
+            break;
+          }
+        }
+
+        await this.mergeRecordIntervals(
           protocol,
           pool,
-          data,
+          allIntervals,
+          startTimestamp,
+          endTimestamp,
         );
 
-        transactions = await this.addFeesInUsdt(transactions);
-
-        await this.saveTransactionsFromProvider(transactions);
-
-        totalFeeEth = totalFeeEth.plus(
-          transactions.reduce(
-            (acc, item) => acc.plus(item.fee.eth),
-            BigNumber(0),
-          ),
-        );
-
-        totalFeeUsdt = totalFeeUsdt.plus(
-          transactions.reduce(
-            (acc, item) => acc.plus(item.fee.usdt),
-            BigNumber(0),
-          ),
-        );
-
-        page++;
-        count += data.length;
-
-        if (data.length < limit - 1) {
-          break;
-        }
+        await this.reportRepo.findByIdAndUpdate(id, {
+          status: ReportStatus.COMPLETED,
+          count,
+          totalFee: {
+            eth: totalFeeEth.toString(),
+            usdt: totalFeeUsdt.toString(),
+          },
+        });
       }
-
-      await this.reportRepo.findByIdAndUpdate(id, {
-        status: ReportStatus.COMPLETED,
-        count,
-        totalFee: {
-          eth: totalFeeEth.toString(),
-          usdt: totalFeeUsdt.toString(),
-        },
-      });
     } catch (e) {
       // TODO: Log error
       console.log(e);
@@ -359,5 +417,35 @@ export class TransactionService {
     }
 
     return output;
+  }
+
+  private async mergeRecordIntervals(
+    protocol: Protocol,
+    pool: Pool,
+    intervals: RecordInterval[],
+    start: number,
+    end: number,
+  ): Promise<void> {
+    let left = [];
+    let right = [];
+
+    for (const interval of intervals) {
+      const { start: first, end: last } = interval;
+
+      // current interval is smaller than newInterval
+      if (last < start) left.push(interval);
+      // current interval is larger than newInterval
+      else if (first > end) right.push(interval);
+      // there is a overlap
+      else {
+        start = Math.min(start, first);
+        end = Math.max(end, last);
+      }
+    }
+
+    const merged = [...left, { start, end, protocol, pool }, ...right];
+
+    await this.intervalRepo.deleteMany({ protocol, pool });
+    await this.intervalRepo.insertMany(merged);
   }
 }

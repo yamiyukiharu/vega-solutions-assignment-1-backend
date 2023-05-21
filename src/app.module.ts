@@ -7,6 +7,14 @@ import { ExchangeRateService } from './exchange-rate/services/ExchangeRate.servi
 import { ITransactionProvider } from './transaction/providers/ITransaction.provider';
 import { TheGraphUniswapV3Provider } from './transaction/providers/TheGraphUniswapV3.provider';
 import { MongooseModule } from '@nestjs/mongoose';
+import { HttpModule } from '@nestjs/axios';
+import { QueueModule } from './common/modules/Queue.module';
+import { ExchangeRateController } from './exchange-rate/controllers/ExchangeRate.controller';
+
+import { IExchangeRateProvider } from './exchange-rate/providers/IExchangeRate.provider';
+import { BinanceProvider } from './exchange-rate/providers/Binance.provider';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import {
   TransactionReport,
   TransactionReportSchema,
@@ -15,17 +23,11 @@ import {
   Transaction,
   TransactionSchema,
 } from './transaction/models/Transaction.model';
-import { HttpModule } from '@nestjs/axios';
-import { QueueModule } from './common/modules/Queue.module';
-import { ExchangeRateController } from './exchange-rate/controllers/ExchangeRate.controller';
-import type { RedisClientOptions } from 'redis';
-import * as redisStore from 'cache-manager-redis-store';
-import { CacheModule } from '@nestjs/cache-manager';
-import { IExchangeRateProvider } from './exchange-rate/providers/IExchangeRate.provider';
-import { BinanceProvider } from './exchange-rate/providers/Binance.provider';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
+import {
+  RecordInterval,
+  RecordIntervalSchema,
+} from './transaction/models/RecordInterval.model';
+import { RedisCacheModule } from './common/modules/RedisCache.module';
 
 @Module({
   imports: [
@@ -33,29 +35,19 @@ import { ConfigService } from '@nestjs/config';
     QueueModule,
     AppConfigModule,
     DatabaseModule,
+    RedisCacheModule,
     ThrottlerModule.forRoot({
       ttl: 60,
       limit: 10,
-    }),
-    CacheModule.registerAsync({
-      imports: [AppConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        store: (await redisStore.redisStore({
-          socket: {
-            host: 'localhost', // default value
-            port: 6379, // default value
-          },
-          ttl: 4 // issue with cache-manager version, ttl in set() does not work
-        })) as any,
-      }),
-      isGlobal: true,
     }),
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
     ]),
     MongooseModule.forFeature([
       { name: TransactionReport.name, schema: TransactionReportSchema },
+    ]),
+    MongooseModule.forFeature([
+      { name: RecordInterval.name, schema: RecordIntervalSchema },
     ]),
   ],
   controllers: [TransactionController, ExchangeRateController],

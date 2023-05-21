@@ -11,12 +11,20 @@ import {
   TransactionReport,
   TransactionReportSchema,
 } from './transaction/models/TransactionReport.model';
-import { Transaction, TransactionSchema } from './transaction/models/Transaction.model';
+import {
+  Transaction,
+  TransactionSchema,
+} from './transaction/models/Transaction.model';
+import {
+  RecordInterval,
+  RecordIntervalSchema,
+} from './transaction/models/RecordInterval.model';
 import { QueueModule } from 'src/common/modules/Queue.module';
 import { HttpModule } from '@nestjs/axios';
 import { IExchangeRateProvider } from 'src/exchange-rate/providers/IExchangeRate.provider';
 import { BinanceProvider } from 'src/exchange-rate/providers/Binance.provider';
 import { ExchangeRateService } from './exchange-rate/services/ExchangeRate.service';
+import { RedisCacheModule } from './common/modules/RedisCache.module';
 
 @Module({
   imports: [
@@ -25,11 +33,15 @@ import { ExchangeRateService } from './exchange-rate/services/ExchangeRate.servi
     QueueModule,
     AppConfigModule,
     DatabaseModule,
+    RedisCacheModule,
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
     ]),
     MongooseModule.forFeature([
       { name: TransactionReport.name, schema: TransactionReportSchema },
+    ]),
+    MongooseModule.forFeature([
+      { name: RecordInterval.name, schema: RecordIntervalSchema },
     ]),
   ],
   providers: [
@@ -43,7 +55,7 @@ import { ExchangeRateService } from './exchange-rate/services/ExchangeRate.servi
     {
       provide: IExchangeRateProvider,
       useClass: BinanceProvider,
-    }
+    },
   ],
 })
 export class TaskModule {}
