@@ -1,19 +1,10 @@
-import { Exclude, Transform } from 'class-transformer';
-import {
-  IsDateString,
-  IsEnum,
-  IsHexadecimal,
-  IsInt,
-  IsOptional,
-  IsPositive,
-  Matches,
-} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsDateString, IsEnum, IsOptional, Matches } from 'class-validator';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
-import { ApiResponse, ApiResponseProperty, PickType } from '@nestjs/swagger';
-import { Transaction, TxFee } from '../models/Transaction.model';
+import { ApiResponseProperty, PickType } from '@nestjs/swagger';
+import { TxFee } from '../models/Transaction.model';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionReport } from '../models/TransactionReport.model';
-import { ObjectId } from 'mongoose';
 
 export class GetTransactionRequest {
   @Matches(/^0x([A-Fa-f0-9]+)$/, {
@@ -122,10 +113,10 @@ export class GetReportResponse {
   @ApiProperty({ enum: ReportStatus })
   status: ReportStatus;
 
-  @ApiProperty({example: '1614556800'})
+  @ApiProperty({ example: '1614556800' })
   startTimestamp: number;
 
-  @ApiProperty({example: '1614556801'})
+  @ApiProperty({ example: '1614556801' })
   endTimestamp: number;
 
   @ApiProperty()

@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Transaction } from '../models/Transaction.model';
-import { ObjectId } from 'mongodb';
 import { Currency, Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TransactionReport } from '../models/TransactionReport.model';
-import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import {
   GetTransactionResult,
@@ -12,12 +10,12 @@ import {
 import * as dayjs from 'dayjs';
 import BigNumber from 'bignumber.js';
 import { GetReportResponse, TransactionResult } from '../dtos/transaction.dto';
-import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ExchangeRateService } from 'src/exchange-rate/services/ExchangeRate.service';
-import { HistoricalDataResult } from 'src/exchange-rate/types';
-import { REPORTS_QUEUE } from 'src/common/constants';
 import { omit } from 'lodash';
+import { InjectModel } from '@nestjs/mongoose';
+import { InjectQueue } from '@nestjs/bull';
+import { REPORTS_QUEUE } from 'src/common/constants';
 
 @Injectable()
 export class TransactionService {
@@ -40,6 +38,7 @@ export class TransactionService {
     return val ? omit(val.toObject(), ['_id']) : null;
   }
 
+  // newest transactions first
   async getTransactionList(
     protocol: Protocol,
     pool: Pool,
@@ -58,7 +57,6 @@ export class TransactionService {
   }
 
   async getTransactionCount(protocol: Protocol, pool: Pool): Promise<number> {
-    // @ts-ignore
     const val = await this.transactionRepo.count({ protocol, pool });
     return val;
   }
@@ -146,6 +144,7 @@ export class TransactionService {
       let totalFeeEth = BigNumber(0);
       let totalFeeUsdt = BigNumber(0);
 
+      // TODO: Use cursor instead of pagination
       while (true) {
         const data = await provider.getTransactions({
           pool,
@@ -294,6 +293,8 @@ export class TransactionService {
     await this.transactionRepo.bulkWrite(updateOperations);
   }
 
+  // Looks for the closest matching exchange rate for each transaction
+  // and adds the fee in USDT
   private async addFeesInUsdt(
     transactions: Transaction[],
   ): Promise<Transaction[]> {

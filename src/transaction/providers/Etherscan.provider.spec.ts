@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { EtherscanProvider, EtherscanResponse } from './Etherscan.provider';
 import { Pool } from 'src/common/enums';
 import BigNumber from 'bignumber.js';

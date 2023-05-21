@@ -3,7 +3,6 @@ import { HttpService } from '@nestjs/axios';
 import { TheGraphUniswapV3Provider, TheGraphResponse } from './TheGraphUniswapV3.provider';
 import { GetTransactionOptions } from './ITransaction.provider';
 import { Pool } from 'src/common/enums';
-import BigNumber from 'bignumber.js';
 
 describe('TheGraphUniswapV3Provider', () => {
   let provider: TheGraphUniswapV3Provider;

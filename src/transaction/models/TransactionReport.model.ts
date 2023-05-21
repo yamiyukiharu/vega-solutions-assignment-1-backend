@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TxFee } from './Transaction.model';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';

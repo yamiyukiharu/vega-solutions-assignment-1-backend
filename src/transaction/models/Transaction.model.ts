@@ -1,7 +1,5 @@
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude } from 'class-transformer';
-import { ObjectId } from 'mongoose';
 import { Pool, Protocol } from 'src/common/enums';
 
 export class TxFee {

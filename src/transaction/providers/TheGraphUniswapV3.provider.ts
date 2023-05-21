@@ -4,9 +4,7 @@ import {
   GetTransactionResult,
   ITransactionProvider,
 } from './ITransaction.provider';
-import { Pool } from 'src/common/enums';
 import { Injectable } from '@nestjs/common';
-import * as dayjs from 'dayjs';
 import BigNumber from 'bignumber.js';
 
 export type TheGraphResponse = {

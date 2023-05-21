@@ -3,14 +3,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionController } from './Transaction.controller';
 import { TransactionService } from '../services/Transaction.service';
 import {
-  GetTransactionRequest,
   GenerateReportRequest,
-  GetReportResponse,
 } from '../dtos/transaction.dto';
 import {
-  HttpException,
   INestApplication,
-  NotFoundException,
 } from '@nestjs/common';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 
