@@ -6,6 +6,7 @@ import {
 } from './ITransaction.provider';
 import { Injectable } from '@nestjs/common';
 import BigNumber from 'bignumber.js';
+import { retryOnFail } from 'src/utils/retry';
 
 export type TheGraphResponse = {
   data: {
@@ -74,10 +75,14 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
     }
     `;
 
-    const response = await this.httpService.axiosRef.post<TheGraphResponse>(
-      this.url,
-      { query },
-    );
+    const request = async () => {
+      return await this.httpService.axiosRef.post<TheGraphResponse>(
+        this.url,
+        { query },
+      );
+    }
+
+    const response  = await retryOnFail(request, 3);
 
     const {
       data: { swaps },

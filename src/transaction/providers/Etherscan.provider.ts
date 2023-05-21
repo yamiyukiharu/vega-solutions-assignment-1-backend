@@ -8,6 +8,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Pool } from 'src/common/enums';
 import BigNumber from 'bignumber.js';
+import { retryOnFail } from 'src/utils/retry';
 
 export type EtherscanResponse = {
   result: {
@@ -71,9 +72,13 @@ export class EtherscanProvider extends ITransactionProvider {
       sort: sort,
     }).toString();
 
-    const { data } = await this.httpService.axiosRef.get<EtherscanResponse>(
-      url.toString(),
-    );
+    const request = async () => {
+      return await this.httpService.axiosRef.get<EtherscanResponse>(
+        url.toString(),
+      );
+    };
+
+    const { data } = await retryOnFail(request, 3);
 
     return data.result.map((tx) => ({
       id: tx.hash,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Transaction } from '../models/Transaction.model';
 import { Currency, Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { TransactionReport } from '../models/TransactionReport.model';
@@ -19,6 +19,8 @@ import { REPORTS_QUEUE } from 'src/common/constants';
 
 @Injectable()
 export class TransactionService {
+  private readonly logger = new Logger(TransactionService.name);
+
   constructor(
     @InjectModel(Transaction.name)
     private transactionRepo: Model<Transaction>,
@@ -67,7 +69,7 @@ export class TransactionService {
     startTime: Date,
     endTime: Date,
   ): Promise<string> {
-    const { id } = await this.reportRepo.create({
+    const report = await this.reportRepo.create({
       status: ReportStatus.PENDING,
       protocol,
       pool,
@@ -75,7 +77,10 @@ export class TransactionService {
       endTimestamp: dayjs(endTime).unix(),
     });
 
+    const { id } = report;
     await this.reportQueue.add({ id });
+
+    this.logger.log(`Report ${id} is added to queue`, report.toObject());
 
     return id;
   }
@@ -230,13 +235,25 @@ export class TransactionService {
         sort: 'asc',
       });
 
+      this.logger.log(
+        `Found ${data.length} new transactions for ${protocol} ${pool}`,
+      );
+
       let transactions = await this.mapProviderResultToModel(
         protocol,
         pool,
         data,
       );
 
+      this.logger.log(
+        `Calculating fees in usdt on new transactions for ${protocol} ${pool}`,
+      );
+
       transactions = await this.addFeesInUsdt(transactions);
+
+      this.logger.log(
+        `Saving ${transactions.length} new transactions for ${protocol} ${pool}`,
+      );
 
       await this.saveTransactionsFromProvider(transactions);
 
