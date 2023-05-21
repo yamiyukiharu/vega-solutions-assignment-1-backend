@@ -17,6 +17,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { InjectQueue } from '@nestjs/bull';
 import { REPORTS_QUEUE } from 'src/common/constants';
 import { RecordInterval } from '../models/RecordInterval.model';
+import { start } from 'repl';
 
 @Injectable()
 export class TransactionService {
@@ -140,10 +141,12 @@ export class TransactionService {
     const { protocol, pool, startTimestamp, endTimestamp } = report;
 
     try {
+      // update status to in progress
       await this.reportRepo.findByIdAndUpdate(id, {
         status: ReportStatus.IN_PROGRESS,
       });
 
+      // check if data is already in DB
       const allIntervals = await this.intervalRepo.find({
         protocol,
         pool,
@@ -209,6 +212,10 @@ export class TransactionService {
             sort: 'asc',
           });
 
+          this.logger.log(
+            `Got ${data.length} transactions from provider, page ${page}`,
+          );
+
           let transactions = await this.mapProviderResultToModel(
             protocol,
             pool,
@@ -240,6 +247,8 @@ export class TransactionService {
             break;
           }
         }
+
+        // handle special case when endTimestamp is greater than current time
 
         await this.mergeRecordIntervals(
           protocol,
@@ -279,7 +288,7 @@ export class TransactionService {
           limit: 1,
           sort: 'desc',
         })
-      : await this.transactionRepo.find({}).sort({ blockNumber: -1 }).limit(1);
+      : await this.transactionRepo.find({}).sort({ timestamp: -1 }).limit(1);
 
     const limit = 1000;
     let page = 0;
@@ -294,7 +303,7 @@ export class TransactionService {
       });
 
       this.logger.log(
-        `Found ${data.length} new transactions for ${protocol} ${pool}`,
+        `Found ${data.length} recent transactions for ${protocol} ${pool}`,
       );
 
       let transactions = await this.mapProviderResultToModel(
@@ -309,11 +318,28 @@ export class TransactionService {
 
       transactions = await this.addFeesInUsdt(transactions);
 
+      const newTxCount = await this.saveTransactionsFromProvider(transactions);
+
       this.logger.log(
-        `Saving ${transactions.length} new transactions for ${protocol} ${pool}`,
+        `Saving ${newTxCount} new transactions for ${protocol} ${pool}`,
       );
 
-      await this.saveTransactionsFromProvider(transactions);
+      const allIntervals = await this.intervalRepo.find({
+        protocol,
+        pool,
+      });
+
+      this.logger.log(
+        `Merging intervals for ${protocol} ${pool} with ${allIntervals.length} records`,
+      );
+
+      await this.mergeRecordIntervals(
+        protocol,
+        pool,
+        allIntervals,
+        transactions[0].timestamp,
+        transactions.slice(-1)[0].timestamp,
+      );
 
       page++;
 
@@ -355,7 +381,9 @@ export class TransactionService {
     });
   }
 
-  private async saveTransactionsFromProvider(data: Transaction[]) {
+  private async saveTransactionsFromProvider(
+    data: Transaction[],
+  ): Promise<number> {
     // Prepare the list of update operations
     const updateOperations = data.map((document) => ({
       updateOne: {
@@ -365,7 +393,11 @@ export class TransactionService {
       },
     }));
 
-    await this.transactionRepo.bulkWrite(updateOperations);
+    const { insertedCount } = await this.transactionRepo.bulkWrite(
+      updateOperations,
+    );
+
+    return insertedCount;
   }
 
   // Looks for the closest matching exchange rate for each transaction
