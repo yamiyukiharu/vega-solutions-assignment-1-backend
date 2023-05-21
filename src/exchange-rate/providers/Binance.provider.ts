@@ -3,6 +3,7 @@ import { IExchangeRateProvider } from './IExchangeRate.provider';
 import { HttpService } from '@nestjs/axios';
 import { GetHistoricalRateOptions, HistoricalDataResult } from '../types';
 import { retryOnFail } from 'src/utils/retry';
+import { Currency } from 'src/common/enums';
 
 @Injectable()
 export class BinanceProvider extends IExchangeRateProvider {
@@ -12,11 +13,11 @@ export class BinanceProvider extends IExchangeRateProvider {
     super();
   }
 
-  private getPairSymbol(from: string, to: string): string {
+  private getPairSymbol(from: Currency, to: Currency): string {
     return `${from.toUpperCase()}${to.toUpperCase()}`;
   }
 
-  async convert(from: string, to: string): Promise<number> {
+  async convert(from: Currency, to: Currency): Promise<number> {
     const symbol = this.getPairSymbol(from, to);
 
     const url = new URL(this.url);

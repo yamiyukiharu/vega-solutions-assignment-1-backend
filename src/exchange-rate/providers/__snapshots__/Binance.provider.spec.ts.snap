@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`BinanceProvider convert should return the exchange rate between two currencies 1`] = `
+[
+  "https://data.binance.com/api/v3/ticker/price?symbol=ETHUSDT",
+]
+`;
+
+exports[`BinanceProvider getHistoricalRates should return historical exchange rates between two currencies 1`] = `
+[
+  "https://data.binance.com/api/v3/ticker/price?symbol=ETHUSDT",
+]
+`;
