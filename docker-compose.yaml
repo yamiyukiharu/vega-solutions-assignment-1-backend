@@ -8,9 +8,11 @@ services:
     image: mongo
     restart: always
     ports:
-      - "27017:27017"
+      - '27017:27017'
     volumes:
       - ./data:/data/db
+    networks:
+      - webnet
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
@@ -20,3 +22,48 @@ services:
       - data:/data
     ports:
       - 6379:6379
+    networks:
+      - webnet
+  api:
+    container_name: vega-backend-api
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: vega-backend:1.0.0
+    ports:
+      - 3001:3001
+    networks:
+      - webnet
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - redis
+  worker:
+    container_name: vega-backend-worker
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: vega-backend:1.0.0
+    networks:
+      - webnet
+    command: node dist/worker.js
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - redis
+  task:
+    container_name: vega-backend-task
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: vega-backend:1.0.0
+    networks:
+      - webnet
+    command: node dist/task.js
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - redis
+networks:
+  webnet:
+    driver: bridge

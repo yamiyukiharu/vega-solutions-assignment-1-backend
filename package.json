@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start --watch",
+    "start": "nest start",
     "start:worker": "nest start --watch --entryFile ./worker.js",
     "start:task": "nest start --watch --entryFile ./task.js",
     "start:dev": "nest start --watch",
