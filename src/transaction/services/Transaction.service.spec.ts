@@ -1,7 +1,7 @@
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionService } from './Transaction.service';
-import { anything, instance, mock, when } from 'ts-mockito';
+import { anything, instance, mock, reset, verify, when } from 'ts-mockito';
 import { HttpService } from '@nestjs/axios';
 import { IExchangeRateProvider } from 'src/exchange-rate/providers/IExchangeRate.provider';
 import { ITransactionProvider } from '../providers/ITransaction.provider';
@@ -23,6 +23,11 @@ import { mongoSnapshotIgnoreFields, sanitizeDocuments } from 'src/utils/tests';
 import { REPORTS_QUEUE } from 'src/common/constants';
 import { BullModule } from '@nestjs/bull';
 import * as dayjs from 'dayjs';
+import {
+  RecordInterval,
+  RecordIntervalSchema,
+} from '../models/RecordInterval.model';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('TransactionService', () => {
   let service: TransactionService;
@@ -30,6 +35,7 @@ describe('TransactionService', () => {
   let mongoConnection: Connection;
   let transactionModel: Model<Transaction>;
   let reportModel: Model<TransactionReport>;
+  let intervalModel: Model<RecordInterval>;
   let transactionProviderMock = mock(EtherscanProvider);
   let exchangeRateProviderMock = mock(BinanceProvider);
 
@@ -52,6 +58,10 @@ describe('TransactionService', () => {
       TransactionReport.name,
       TransactionReportSchema,
     );
+    intervalModel = mongoConnection.model(
+      RecordInterval.name,
+      RecordIntervalSchema,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [
@@ -71,6 +81,10 @@ describe('TransactionService', () => {
           useValue: reportModel,
         },
         {
+          provide: getModelToken(RecordInterval.name),
+          useValue: intervalModel,
+        },
+        {
           provide: HttpService,
           useValue: instance(mock(HttpService)),
         },
@@ -81,6 +95,13 @@ describe('TransactionService', () => {
         {
           provide: IExchangeRateProvider,
           useValue: instance(exchangeRateProviderMock),
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+          },
         },
       ],
     })
@@ -139,6 +160,7 @@ describe('TransactionService', () => {
       const collection = collections[key];
       await collection.deleteMany({});
     }
+    reset(transactionProviderMock);
   });
 
   describe('getTransactions', () => {
@@ -317,6 +339,35 @@ describe('TransactionService', () => {
       const transactions = await transactionModel.find({});
       const sanitizedData = sanitizeDocuments(transactions);
 
+      expect(res.toObject()).toMatchSnapshot(mongoSnapshotIgnoreFields);
+      expect(sanitizedData).toMatchSnapshot();
+    });
+
+    it('should not process if the data is already present in database', async () => {
+      // Arrange
+      await intervalModel.create({
+        protocol: Protocol.UNISWAPV3,
+        pool: Pool.ETH_USDC,
+        start: dayjs('2021-01-01T00:00:00.000Z').unix(),
+        end: dayjs('2021-01-02T00:00:00.000Z').unix(),
+      });
+
+      const { id } = await reportModel.create({
+        protocol: Protocol.UNISWAPV3,
+        pool: Pool.ETH_USDC,
+        startTimestamp: dayjs('2021-01-01T00:00:00.000Z').unix(),
+        endTimestamp: dayjs('2021-01-02T00:00:00.000Z').unix(),
+      });
+
+      // Act
+      await service.processReport(id);
+
+      // Assert
+      const res = await reportModel.findById(id);
+      const transactions = await transactionModel.find({});
+      const sanitizedData = sanitizeDocuments(transactions);
+
+      verify(transactionProviderMock.getTransactions(anything())).never();
       expect(res.toObject()).toMatchSnapshot(mongoSnapshotIgnoreFields);
       expect(sanitizedData).toMatchSnapshot();
     });

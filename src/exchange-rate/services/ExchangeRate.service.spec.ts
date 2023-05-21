@@ -3,6 +3,7 @@ import { ExchangeRateService } from './ExchangeRate.service';
 import { IExchangeRateProvider } from '../providers/IExchangeRate.provider';
 import { Currency } from 'src/common/enums';
 import { GetHistoricalRateOptions, HistoricalDataResult } from '../types';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('ExchangeRateService', () => {
   let service: ExchangeRateService;
@@ -19,6 +20,13 @@ describe('ExchangeRateService', () => {
           useValue: {
             convert: mockConvert,
             getHistoricalRates: mockGetHistoricalRates,
+          },
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
           },
         },
       ],
