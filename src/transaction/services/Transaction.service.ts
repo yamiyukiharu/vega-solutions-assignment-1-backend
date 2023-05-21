@@ -93,7 +93,15 @@ export class TransactionService {
     limit: number,
   ): Promise<GetReportResponse> {
     const report = await this.reportRepo.findById(id);
-    const { startTimestamp, endTimestamp, count, totalFee } = report;
+    const {
+      startTimestamp,
+      endTimestamp,
+      count,
+      totalFee,
+      protocol,
+      pool,
+      status,
+    } = report;
 
     const transactions = await this.transactionRepo
       .find({
@@ -106,8 +114,13 @@ export class TransactionService {
       .limit(limit)
       .sort({ timestamp: -1 });
 
-    // sum of all fee.eth
     return {
+      id,
+      status: report.status,
+      protocol,
+      pool,
+      startTimestamp,
+      endTimestamp,
       page,
       limit,
       totalFee,

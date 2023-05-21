@@ -1,0 +1,66 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TransactionController generateReport should throw an HttpException when report generation fails 1`] = `
+{
+  "message": "Failed to trigger report generation",
+  "statusCode": 500,
+}
+`;
+
+exports[`TransactionController generateReport should trigger report generation and return a Location header 1`] = `"v1/transactions/reports/status/report-id"`;
+
+exports[`TransactionController generateReport should trigger report generation and return a Location header 2`] = `
+{
+  "location": "v1/transactions/reports/status/report-id",
+}
+`;
+
+exports[`TransactionController getReport should throw a NotFoundException when no report is found 1`] = `
+{
+  "error": "Not Found",
+  "message": "Report with id report-id not found",
+  "statusCode": 404,
+}
+`;
+
+exports[`TransactionController getReportStatus should throw a NotFoundException when no report is found 1`] = `
+{
+  "error": "Not Found",
+  "message": "Report with id report-id not found",
+  "statusCode": 404,
+}
+`;
+
+exports[`TransactionController getTransactions should return a list of transactions 1`] = `
+{
+  "data": [
+    {
+      "id": 1,
+    },
+    {
+      "id": 2,
+    },
+  ],
+  "limit": "10",
+  "page": "1",
+  "total": 2,
+}
+`;
+
+exports[`TransactionController getTransactions should return a single transaction when a hash is provided 1`] = `
+{
+  "data": [
+    {
+      "id": "0x1234",
+    },
+  ],
+}
+`;
+
+exports[`TransactionController getTransactions should throw a NotFoundException when a hash is provided but no transaction is found 1`] = `
+{
+  "error": "Not Found",
+  "message": "Transaction with hash 0x1234 not found",
+  "statusCode": 404,
+}
+`;

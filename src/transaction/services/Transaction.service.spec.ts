@@ -356,6 +356,7 @@ describe('TransactionService', () => {
           usdt: '200',
         },
         count: 2,
+        status: ReportStatus.COMPLETED,
       });
 
       await transactionModel.create([
@@ -397,6 +398,7 @@ describe('TransactionService', () => {
       const result = await service.getReport(id, 0, 10);
 
       // Assert
+      result.id = undefined;
       expect(result).toMatchSnapshot();
     });
   });

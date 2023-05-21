@@ -8,7 +8,7 @@ import {
   IsPositive,
   Matches,
 } from 'class-validator';
-import { Pool, Protocol } from 'src/common/enums';
+import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import {
   ApiResponse,
   ApiResponseProperty,
@@ -28,7 +28,7 @@ export class GetTransactionRequest {
     description:
       'Transaction Hash. If this is specified, page and limit parameters are ignored. Must begin with 0x',
   })
-  hash: string;
+  hash?: string;
 
   @IsEnum(Protocol)
   @ApiProperty({ enum: Protocol })
@@ -114,6 +114,24 @@ export class GetReportRequest {
 }
 
 export class GetReportResponse {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  protocol: Protocol;
+
+  @ApiProperty()
+  pool: Pool;
+
+  @ApiProperty({enum: ReportStatus})
+  status: ReportStatus;
+
+  @ApiProperty()
+  startTimestamp: number;
+
+  @ApiProperty()
+  endTimestamp: number;
+
   @ApiProperty()
   totalFee: {
     eth: string;
