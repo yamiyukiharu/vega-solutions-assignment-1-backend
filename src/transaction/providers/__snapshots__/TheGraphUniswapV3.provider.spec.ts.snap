@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TheGraphUniswapV3Provider getTransactions should return an array of transactions 1`] = `
+[
+  "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
+  {
+    "query": "
+    query {
+      swaps(
+        first: 100,
+        skip: 0,
+        orderBy: timestamp,
+        orderDirection: asc,
+        where: { pool: "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640", timestamp_gte: "1628000000", timestamp_lte: "1629000000" },
+      ) {
+        amount0
+        amount1
+        transaction {
+          id
+          blockNumber
+          gasUsed
+          gasPrice
+          timestamp
+        }
+      }
+    }
+    ",
+  },
+]
+`;

@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`EtherscanProvider getTransactions should use the correct API key 1`] = `
+[
+  "https://api.etherscan.io/api?module=account&action=tokentx&address=0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640&contractAddress=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2&page=0&offset=100&startblock=0&endblock=27025780&apiKey=test-api-key&sort=asc",
+]
+`;
+
+exports[`EtherscanProvider getTransactions should use the correct contract address for ETH_USDC pool 1`] = `
+[
+  "https://api.etherscan.io/api?module=account&action=tokentx&address=0x123&contractAddress=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2&page=0&offset=100&startblock=0&endblock=27025780&apiKey=test-api-key&sort=asc",
+]
+`;
