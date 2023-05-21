@@ -1,9 +1,8 @@
-
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppConfigModule } from './AppConfig.module';
-import { REPORTS_QUEUE } from '../constants';
+import { RECORD_QUEUE, REPORTS_QUEUE } from '../constants';
 
 @Module({
   imports: [
@@ -18,7 +17,18 @@ import { REPORTS_QUEUE } from '../constants';
       }),
       inject: [ConfigService],
     }),
+    BullModule.registerQueueAsync({
+      imports: [AppConfigModule],
+      name: RECORD_QUEUE,
+      useFactory: async (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('QUEUE_HOST'),
+          port: configService.get('QUEUE_PORT'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   exports: [BullModule],
 })
-export class QueueModule { }
+export class QueueModule {}
