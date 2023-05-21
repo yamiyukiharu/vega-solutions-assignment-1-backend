@@ -76,13 +76,17 @@ export class TheGraphUniswapV3Provider extends ITransactionProvider {
     `;
 
     const request = async () => {
-      return await this.httpService.axiosRef.post<TheGraphResponse>(
-        this.url,
-        { query },
-      );
-    }
+      return await this.httpService.axiosRef.post<TheGraphResponse>(this.url, {
+        query,
+      });
+    };
 
-    const response  = await retryOnFail(request, 3);
+    let response = await retryOnFail(request, 3);
+
+    while (!response.data) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      response = await retryOnFail(request, 3);
+    }
 
     const {
       data: { swaps },

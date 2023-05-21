@@ -196,24 +196,23 @@ export class TransactionService {
         const provider = this.getProvider(protocol);
 
         const limit = 1000;
-        let page = 0;
         let count = 0;
         let totalFeeEth = BigNumber(0);
         let totalFeeUsdt = BigNumber(0);
+        let start = startTimestamp;
 
-        // TODO: Use cursor instead of pagination
         while (true) {
           const data = await provider.getTransactions({
             pool,
-            page,
+            page: 0,
             limit,
-            startTimestamp,
+            startTimestamp: start,
             endTimestamp,
             sort: 'asc',
           });
 
           this.logger.log(
-            `Got ${data.length} transactions from provider, page ${page}`,
+            `Got ${data.length} transactions from provider, start: ${start}, end: ${endTimestamp}`,
           );
 
           let transactions = await this.mapProviderResultToModel(
@@ -240,8 +239,8 @@ export class TransactionService {
             ),
           );
 
-          page++;
           count += data.length;
+          start = data[data.length - 1].timestamp;
 
           if (data.length < limit - 1) {
             break;
@@ -338,7 +337,7 @@ export class TransactionService {
         pool,
         allIntervals,
         transactions[0].timestamp,
-        transactions.slice(-1)[0].timestamp,
+        transactions[transactions.length - 1].timestamp,
       );
 
       page++;
