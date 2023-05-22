@@ -124,6 +124,80 @@ exports[`TransactionService getTransactionsList should return transactions for a
 ]
 `;
 
+exports[`TransactionService processReport should merge overlapping intervals 1`] = `
+{
+  "__v": Any<Number>,
+  "_id": Any<Object>,
+  "count": 3,
+  "endTimestamp": 1609545601,
+  "pool": "eth_usdc",
+  "protocol": "uniswapv3",
+  "startTimestamp": 1609459200,
+  "status": "completed",
+  "totalFee": {
+    "eth": "52305337163812160",
+    "usdt": "97.1614060907541336",
+  },
+}
+`;
+
+exports[`TransactionService processReport should merge overlapping intervals 2`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 1,
+    "fee": {
+      "eth": "22921930374619520",
+      "usdt": "41.259474674315136",
+    },
+    "hash": "0x1",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 1,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 2,
+    "fee": {
+      "eth": "14691703394596320",
+      "usdt": "26.45975781366797232",
+    },
+    "hash": "0x2",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 2,
+  },
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "blockNumber": 3,
+    "fee": {
+      "eth": "14691703394596320",
+      "usdt": "29.44217360277102528",
+    },
+    "hash": "0x3",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 5,
+  },
+]
+`;
+
+exports[`TransactionService processReport should merge overlapping intervals 3`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "end": 1609545601,
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "start": 1609459200,
+  },
+]
+`;
+
 exports[`TransactionService processReport should not process if the data is already present in database 1`] = `
 {
   "__v": Any<Number>,
@@ -204,6 +278,19 @@ exports[`TransactionService processReport should update report status to COMPLET
 ]
 `;
 
+exports[`TransactionService processReport should update report status to COMPLETED and set total fees 3`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "end": 1609545600,
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "start": 1609459200,
+  },
+]
+`;
+
 exports[`TransactionService processReport should update report status to FAILED if an error occurs 1`] = `
 {
   "__v": Any<Number>,
@@ -256,6 +343,19 @@ exports[`TransactionService recordNewTransactions can record new transactions 1`
     "pool": "eth_usdc",
     "protocol": "uniswapv3",
     "timestamp": 5,
+  },
+]
+`;
+
+exports[`TransactionService recordNewTransactions can record new transactions 2`] = `
+[
+  {
+    "__v": undefined,
+    "_id": undefined,
+    "end": 5,
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "start": 1,
   },
 ]
 `;

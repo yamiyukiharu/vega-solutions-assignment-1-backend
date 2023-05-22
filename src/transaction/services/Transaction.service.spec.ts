@@ -114,6 +114,7 @@ describe('TransactionService', () => {
   });
 
   beforeEach(async () => {
+    await mongoConnection.dropDatabase();
     when(transactionProviderMock.getTransactions(anything())).thenResolve([
       {
         id: '0x1',
@@ -238,8 +239,10 @@ describe('TransactionService', () => {
 
       // Assert
       const data = await transactionModel.find({});
-      const sanitizedData = sanitizeDocuments(data);
-      expect(sanitizedData).toMatchSnapshot();
+      const intervals = await intervalModel.find({});
+
+      expect(sanitizeDocuments(data)).toMatchSnapshot();
+      expect(sanitizeDocuments(intervals)).toMatchSnapshot();
     });
   });
   describe('getTransactionCount', () => {
@@ -327,8 +330,8 @@ describe('TransactionService', () => {
       const { id } = await reportModel.create({
         protocol: Protocol.UNISWAPV3,
         pool: Pool.ETH_USDC,
-        startTimestamp: dayjs('2021-01-01T00:00:00.000Z').unix(),
-        endTimestamp: dayjs('2021-01-02T00:00:00.000Z').unix(),
+        startTimestamp: 1609459200,
+        endTimestamp: 1609545600,
       });
 
       // Act
@@ -337,10 +340,40 @@ describe('TransactionService', () => {
       // Assert
       const res = await reportModel.findById(id);
       const transactions = await transactionModel.find({});
-      const sanitizedData = sanitizeDocuments(transactions);
+      const intervals = await intervalModel.find({});
 
       expect(res.toObject()).toMatchSnapshot(mongoSnapshotIgnoreFields);
-      expect(sanitizedData).toMatchSnapshot();
+      expect(sanitizeDocuments(transactions)).toMatchSnapshot();
+      expect(sanitizeDocuments(intervals)).toMatchSnapshot();
+    });
+
+    it('should merge overlapping intervals', async () => {
+      // Arrange
+      await intervalModel.create({
+        protocol: Protocol.UNISWAPV3,
+        pool: Pool.ETH_USDC,
+        start: 1609459200,
+        end: 1609545600,
+      });
+
+      const { id } = await reportModel.create({
+        protocol: Protocol.UNISWAPV3,
+        pool: Pool.ETH_USDC,
+        startTimestamp: 1609459200,
+        endTimestamp: 1609545601,
+      });
+
+      // Act
+      await service.processReport(id);
+
+      // Assert
+      const res = await reportModel.findById(id);
+      const transactions = await transactionModel.find({});
+      const intervals = await intervalModel.find({});
+
+      expect(res.toObject()).toMatchSnapshot(mongoSnapshotIgnoreFields);
+      expect(sanitizeDocuments(transactions)).toMatchSnapshot();
+      expect(sanitizeDocuments(intervals)).toMatchSnapshot();
     });
 
     it('should not process if the data is already present in database', async () => {
@@ -348,15 +381,15 @@ describe('TransactionService', () => {
       await intervalModel.create({
         protocol: Protocol.UNISWAPV3,
         pool: Pool.ETH_USDC,
-        start: dayjs('2021-01-01T00:00:00.000Z').unix(),
-        end: dayjs('2021-01-02T00:00:00.000Z').unix(),
+        start: 1609459200,
+        end: 1609545600,
       });
 
       const { id } = await reportModel.create({
         protocol: Protocol.UNISWAPV3,
         pool: Pool.ETH_USDC,
-        startTimestamp: dayjs('2021-01-01T00:00:00.000Z').unix(),
-        endTimestamp: dayjs('2021-01-02T00:00:00.000Z').unix(),
+        startTimestamp: 1609459200,
+        endTimestamp: 1609545600,
       });
 
       // Act
@@ -365,11 +398,10 @@ describe('TransactionService', () => {
       // Assert
       const res = await reportModel.findById(id);
       const transactions = await transactionModel.find({});
-      const sanitizedData = sanitizeDocuments(transactions);
 
       verify(transactionProviderMock.getTransactions(anything())).never();
       expect(res.toObject()).toMatchSnapshot(mongoSnapshotIgnoreFields);
-      expect(sanitizedData).toMatchSnapshot();
+      expect(sanitizeDocuments(transactions)).toMatchSnapshot();
     });
 
     it('should update report status to FAILED if an error occurs', async () => {
