@@ -36,7 +36,7 @@ export class BinanceProvider extends IExchangeRateProvider {
 
     const query = {
       symbol,
-      interval: '1m',
+      interval: '1s',
       limit: '1000',
     };
 
@@ -52,7 +52,7 @@ export class BinanceProvider extends IExchangeRateProvider {
     };
 
     const response = await retryOnFail(request, 3);
-
+    
     return response.data.map((item) => ({
       timestamp: parseInt(item[0]) / 1000,
       value: item[4], // lowest price

@@ -276,7 +276,7 @@ export class TransactionService {
         protocol,
         pool,
         startBlock: latestBlock[0].blockNumber,
-        sort: 'desc',
+        sort: 'asc',
       });
 
       if (transactions.length < this.MAX_RECORDS_PER_INTERVAL - 1) {
@@ -347,12 +347,14 @@ export class TransactionService {
     });
 
     for (const transaction of transactions) {
-      // Find the exchange rate with the closest matching timestamp
+      // Find the exchange rate with the closest matching timestamp (5 seconds)
       let rateIdx = rates.findIndex((rate) => {
+        // return Math.abs(rate.timestamp - transaction.timestamp) < 5;
         return rate.timestamp >= transaction.timestamp;
       });
 
       while (rateIdx === -1) {
+        console.log(rates[rates.length - 1].timestamp)
         rates = await this.exchangeRateService.getHistoricalRates({
           from: Currency.ETH,
           to: Currency.USDT,
