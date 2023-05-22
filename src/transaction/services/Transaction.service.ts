@@ -18,6 +18,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { REPORTS_QUEUE } from 'src/common/constants';
 import { RecordInterval } from '../models/RecordInterval.model';
 import { start } from 'repl';
+import e from 'express';
 
 @Injectable()
 export class TransactionService {
@@ -53,39 +54,46 @@ export class TransactionService {
     limit: number,
   ): Promise<TransactionResult[]> {
     // get the latest interval
-    const latestInterval = await this.intervalRepo
+    const latestInterval = (await this.intervalRepo
       .findOne()
-      .sort({ timestamp: -1 });
+      .sort({ timestamp: -1 })) || {
+      start: dayjs().unix(),
+      end: dayjs().unix(),
+    };
 
-    if (!latestInterval) {
-      return [];
-    }
-
-    let transactions = await this.transactionRepo
-      .find({
-        protocol,
-        pool,
-        timestamp: {
-          $gte: latestInterval.start,
-          $lte: latestInterval.end,
-        },
-      })
-      .skip(page * limit)
-      .limit(limit)
-      .sort({ timestamp: -1 });
+    let transactions = await this.retrieveTransactionsBetween(
+      protocol,
+      pool,
+      latestInterval.start,
+      latestInterval.end,
+      page,
+      limit,
+    );
 
     if (transactions.length == limit) {
-      return transactions.map((item) => omit(item.toObject(), ['_id']));
+      return transactions;
     }
 
     // if the latest interval transaction count is less than limit,
     // we need to fetch new data
-    return await this.saveTransactionsFromProvider({
+    await this.saveTransactionsFromProvider({
       protocol,
       pool,
-      sort: 'desc',
+      limit,
       endTimestamp: latestInterval.end,
+      sort: 'desc',
     });
+
+    return (
+      await this.transactionRepo
+        .find({
+          protocol,
+          pool,
+        })
+        .skip(page * limit)
+        .limit(limit)
+        .sort({ timestamp: -1 })
+    ).map((item) => omit(item.toObject(), ['_id']));
   }
 
   async getTransactionCount(protocol: Protocol, pool: Pool): Promise<number> {
@@ -136,16 +144,14 @@ export class TransactionService {
       status,
     } = report;
 
-    const transactions = await this.transactionRepo
-      .find({
-        timestamp: {
-          $gte: startTimestamp,
-          $lte: endTimestamp,
-        },
-      })
-      .skip(page * limit)
-      .limit(limit)
-      .sort({ timestamp: -1 });
+    const transactions = await this.retrieveTransactionsBetween(
+      protocol,
+      pool,
+      startTimestamp,
+      endTimestamp,
+      page,
+      limit,
+    );
 
     return {
       id,
@@ -158,7 +164,7 @@ export class TransactionService {
       limit,
       totalFee,
       total: count,
-      data: transactions.map((item) => omit(item.toObject(), ['_id'])),
+      data: transactions,
     };
   }
 
@@ -212,7 +218,6 @@ export class TransactionService {
           const transactions = await this.saveTransactionsFromProvider({
             protocol,
             pool,
-            sort: 'asc',
             startTimestamp: start,
             endTimestamp,
           });
@@ -276,13 +281,36 @@ export class TransactionService {
         protocol,
         pool,
         startBlock: latestBlock[0].blockNumber,
-        sort: 'asc',
       });
 
       if (transactions.length < this.MAX_RECORDS_PER_INTERVAL - 1) {
         break;
       }
     }
+  }
+
+  private async retrieveTransactionsBetween(
+    protocol: Protocol,
+    pool: Pool,
+    startTimestamp: number,
+    endTimestamp: number,
+    page: number,
+    limit: number,
+  ): Promise<Transaction[]> {
+    const transactions = await this.transactionRepo
+      .find({
+        protocol,
+        pool,
+        timestamp: {
+          $gte: startTimestamp,
+          $lte: endTimestamp,
+        },
+      })
+      .skip(page * limit)
+      .limit(limit)
+      .sort({ timestamp: -1 });
+
+    return transactions.map((item) => omit(item.toObject(), ['_id']));
   }
 
   private getProvider(protocol: Protocol): ITransactionProvider {
@@ -327,15 +355,16 @@ export class TransactionService {
       },
     }));
 
-    const { insertedCount } = await this.transactionRepo.bulkWrite(
+    const { upsertedCount } = await this.transactionRepo.bulkWrite(
       updateOperations,
     );
 
-    return insertedCount;
+    return upsertedCount;
   }
 
   // Looks for the closest matching exchange rate for each transaction
   // and adds the fee in USDT
+  // transactions must be in ascending order
   private async addFeesInUsdt(
     transactions: Transaction[],
   ): Promise<Transaction[]> {
@@ -344,21 +373,22 @@ export class TransactionService {
       from: Currency.ETH,
       to: Currency.USDT,
       startTimestamp: transactions[0].timestamp,
+      limit: transactions.length,
     });
 
     for (const transaction of transactions) {
-      // Find the exchange rate with the closest matching timestamp (5 seconds)
       let rateIdx = rates.findIndex((rate) => {
+        // Find the exchange rate with the closest matching timestamp (5 seconds)
         // return Math.abs(rate.timestamp - transaction.timestamp) < 5;
         return rate.timestamp >= transaction.timestamp;
       });
 
       while (rateIdx === -1) {
-        console.log(rates[rates.length - 1].timestamp)
         rates = await this.exchangeRateService.getHistoricalRates({
           from: Currency.ETH,
           to: Currency.USDT,
           startTimestamp: rates[rates.length - 1].timestamp,
+          limit: transactions.length,
         });
 
         rateIdx = rates.findIndex((rate) => {
@@ -387,10 +417,12 @@ export class TransactionService {
     return output;
   }
 
+  // transactions are returned in ascending order
   async saveTransactionsFromProvider(options: {
     protocol: Protocol;
     pool: Pool;
-    sort: 'asc' | 'desc';
+    limit?: number;
+    sort?: 'asc' | 'desc';
     startBlock?: number;
     endBlock?: number;
     startTimestamp?: number;
@@ -399,6 +431,7 @@ export class TransactionService {
     const {
       protocol,
       pool,
+      limit,
       sort,
       startBlock,
       endBlock,
@@ -414,12 +447,12 @@ export class TransactionService {
     const data = await provider.getTransactions({
       pool,
       page: 0,
-      limit: this.MAX_RECORDS_PER_INTERVAL,
+      limit: limit || this.MAX_RECORDS_PER_INTERVAL,
       startBlock,
       endBlock,
       startTimestamp,
       endTimestamp,
-      sort,
+      sort: sort || 'asc',
     });
 
     this.logger.log(
@@ -435,6 +468,9 @@ export class TransactionService {
     this.logger.log(
       `Calculating fees in usdt on new transactions for ${protocol} ${pool}`,
     );
+
+    // addFeesInUsdt requires the transactions to be in ascending order
+    if (sort === 'desc') transactions = transactions.reverse();
 
     transactions = await this.addFeesInUsdt(transactions);
 

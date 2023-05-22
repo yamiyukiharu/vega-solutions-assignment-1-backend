@@ -8,6 +8,7 @@ export type HistoricalDataResult = {
 export type GetHistoricalRateOptions = {
   from: Currency;
   to: Currency;
+  limit?: number;
   startTimestamp?: number;
   endTimestamp?: number;
 };

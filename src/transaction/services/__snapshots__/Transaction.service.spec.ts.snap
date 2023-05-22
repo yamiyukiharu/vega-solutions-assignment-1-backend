@@ -72,6 +72,30 @@ exports[`TransactionService getTransactionsList should fetch new transactions wh
     "protocol": "uniswapv3",
     "timestamp": 6,
   },
+  {
+    "__v": 0,
+    "blockNumber": 5,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x5",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 5,
+  },
+  {
+    "__v": 0,
+    "blockNumber": 4,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "100",
+    },
+    "hash": "0x4",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 4,
+  },
 ]
 `;
 
