@@ -204,6 +204,13 @@ describe('TransactionService', () => {
   describe('getTransactionsList', () => {
     it('should return transactions for a given protocol and pool', async () => {
       // Arrange
+      await intervalModel.create({
+        protocol: Protocol.UNISWAPV3,
+        pool: Pool.ETH_USDC,
+        start: 0,
+        end: 9,
+      });
+
       const protocol = Protocol.UNISWAPV3;
       const pool = Pool.ETH_USDC;
       for (let i = 0; i < 10; i++) {
@@ -222,6 +229,48 @@ describe('TransactionService', () => {
 
       // Act
       const result = await service.getTransactionList(protocol, pool, 0, 5);
+
+      // Assert
+      expect(result).toMatchSnapshot();
+    });
+
+    it('should fetch new transactions when database has not enough data', async () => {
+      // Arrange
+      await intervalModel.create({
+        protocol: Protocol.UNISWAPV3,
+        pool: Pool.ETH_USDC,
+        start: 4,
+        end: 5,
+      });
+
+      const protocol = Protocol.UNISWAPV3;
+      const pool = Pool.ETH_USDC;
+      for (let i = 4; i < 6; i++) {
+        await transactionModel.create({
+          protocol,
+          pool,
+          hash: `0x${i}`,
+          timestamp: i,
+          blockNumber: i,
+          fee: {
+            eth: '100000000000000000',
+            usdt: '100',
+          },
+        });
+      }
+
+      when(transactionProviderMock.getTransactions(anything())).thenResolve([
+        {
+          id: '0x10',
+          timestamp: 6,
+          blockNumber: 10,
+          fee: '100000000000000000',
+        },
+      ]);
+
+      // Act
+      const result = await service.getTransactionList(protocol, pool, 0, 3);
+      verify(transactionProviderMock.getTransactions(anything())).once();
 
       // Assert
       expect(result).toMatchSnapshot();
@@ -330,8 +379,8 @@ describe('TransactionService', () => {
       const { id } = await reportModel.create({
         protocol: Protocol.UNISWAPV3,
         pool: Pool.ETH_USDC,
-        startTimestamp: 1609459200,
-        endTimestamp: 1609545600,
+        startTimestamp: 1,
+        endTimestamp: 5,
       });
 
       // Act
@@ -352,16 +401,17 @@ describe('TransactionService', () => {
       await intervalModel.create({
         protocol: Protocol.UNISWAPV3,
         pool: Pool.ETH_USDC,
-        start: 1609459200,
-        end: 1609545600,
+        start: 2,
+        end: 5,
       });
 
       const { id } = await reportModel.create({
         protocol: Protocol.UNISWAPV3,
         pool: Pool.ETH_USDC,
-        startTimestamp: 1609459200,
-        endTimestamp: 1609545601,
+        startTimestamp: 1,
+        endTimestamp: 5,
       });
+      
 
       // Act
       await service.processReport(id);

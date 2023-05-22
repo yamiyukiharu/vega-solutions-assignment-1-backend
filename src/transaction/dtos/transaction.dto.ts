@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEnum, IsOptional, Matches } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, Matches, Max, Min } from 'class-validator';
 import { Pool, Protocol, ReportStatus } from 'src/common/enums';
 import { ApiResponseProperty, PickType } from '@nestjs/swagger';
 import { TxFee } from '../models/Transaction.model';
@@ -26,13 +26,16 @@ export class GetTransactionRequest {
   pool: Pool;
 
   @IsOptional()
+  @Min(0)
   @Transform(({ value }) => parseInt(value))
   @ApiPropertyOptional({ default: 0 })
   page?: number = 0;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
-  @ApiPropertyOptional({ default: 10 })
+  @Min(1)
+  @Max(100)
+  @ApiPropertyOptional({ default: 10, description: 'maximum is 100' })
   limit?: number = 10;
 }
 

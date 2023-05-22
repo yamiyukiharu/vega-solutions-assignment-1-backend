@@ -59,6 +59,22 @@ exports[`TransactionService getTransactions should return transactions for a giv
 }
 `;
 
+exports[`TransactionService getTransactionsList should fetch new transactions when database has not enough data 1`] = `
+[
+  {
+    "blockNumber": 10,
+    "fee": {
+      "eth": "100000000000000000",
+      "usdt": "180.5",
+    },
+    "hash": "0x10",
+    "pool": "eth_usdc",
+    "protocol": "uniswapv3",
+    "timestamp": 6,
+  },
+]
+`;
+
 exports[`TransactionService getTransactionsList should return transactions for a given protocol and pool 1`] = `
 [
   {
@@ -129,10 +145,10 @@ exports[`TransactionService processReport should merge overlapping intervals 1`]
   "__v": Any<Number>,
   "_id": Any<Object>,
   "count": 3,
-  "endTimestamp": 1609545601,
+  "endTimestamp": 5,
   "pool": "eth_usdc",
   "protocol": "uniswapv3",
-  "startTimestamp": 1609459200,
+  "startTimestamp": 1,
   "status": "completed",
   "totalFee": {
     "eth": "52305337163812160",
@@ -190,10 +206,10 @@ exports[`TransactionService processReport should merge overlapping intervals 3`]
   {
     "__v": undefined,
     "_id": undefined,
-    "end": 1609545601,
+    "end": 5,
     "pool": "eth_usdc",
     "protocol": "uniswapv3",
-    "start": 1609459200,
+    "start": 1,
   },
 ]
 `;
@@ -222,10 +238,10 @@ exports[`TransactionService processReport should update report status to COMPLET
   "__v": Any<Number>,
   "_id": Any<Object>,
   "count": 3,
-  "endTimestamp": 1609545600,
+  "endTimestamp": 5,
   "pool": "eth_usdc",
   "protocol": "uniswapv3",
-  "startTimestamp": 1609459200,
+  "startTimestamp": 1,
   "status": "completed",
   "totalFee": {
     "eth": "52305337163812160",
@@ -283,10 +299,10 @@ exports[`TransactionService processReport should update report status to COMPLET
   {
     "__v": undefined,
     "_id": undefined,
-    "end": 1609545600,
+    "end": 5,
     "pool": "eth_usdc",
     "protocol": "uniswapv3",
-    "start": 1609459200,
+    "start": 1,
   },
 ]
 `;

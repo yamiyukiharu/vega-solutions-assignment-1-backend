@@ -22,6 +22,7 @@ import { start } from 'repl';
 @Injectable()
 export class TransactionService {
   private readonly logger = new Logger(TransactionService.name);
+  private readonly MAX_RECORDS_PER_INTERVAL = 1000;
 
   constructor(
     @InjectModel(Transaction.name)
@@ -51,15 +52,40 @@ export class TransactionService {
     page: number,
     limit: number,
   ): Promise<TransactionResult[]> {
-    const val = await this.transactionRepo
+    // get the latest interval
+    const latestInterval = await this.intervalRepo
+      .findOne()
+      .sort({ timestamp: -1 });
+
+    if (!latestInterval) {
+      return [];
+    }
+
+    let transactions = await this.transactionRepo
       .find({
         protocol,
         pool,
+        timestamp: {
+          $gte: latestInterval.start,
+          $lte: latestInterval.end,
+        },
       })
       .skip(page * limit)
       .limit(limit)
       .sort({ timestamp: -1 });
-    return val.map((item) => omit(item.toObject(), ['_id']));
+
+    if (transactions.length == limit) {
+      return transactions.map((item) => omit(item.toObject(), ['_id']));
+    }
+
+    // if the latest interval transaction count is less than limit,
+    // we need to fetch new data
+    return await this.saveTransactionsFromProvider({
+      protocol,
+      pool,
+      sort: 'desc',
+      endTimestamp: latestInterval.end,
+    });
   }
 
   async getTransactionCount(protocol: Protocol, pool: Pool): Promise<number> {
@@ -147,15 +173,12 @@ export class TransactionService {
       });
 
       // check if data is already in DB
-      const allIntervals = await this.intervalRepo.find({
+      const dataInDb = await this.dataIntervalExists(
         protocol,
         pool,
-      });
-
-      const dataInDb =
-        allIntervals.findIndex(
-          (item) => item.start <= startTimestamp && item.end >= endTimestamp,
-        ) !== -1;
+        startTimestamp,
+        endTimestamp,
+      );
 
       if (dataInDb) {
         this.logger.log(`Data is already in DB, skip getting data from API`);
@@ -174,85 +197,45 @@ export class TransactionService {
           },
         });
 
-        const totalFeeEth = transactions.reduce(
-          (acc, item) => acc.plus(item.fee.eth),
-          BigNumber(0),
-        );
-
-        const totalFeeUsdt = transactions.reduce(
-          (acc, item) => acc.plus(item.fee.usdt),
-          BigNumber(0),
-        );
-
         await this.reportRepo.findByIdAndUpdate(id, {
           status: ReportStatus.COMPLETED,
           count,
-          totalFee: {
-            eth: totalFeeEth,
-            usdt: totalFeeUsdt,
-          },
+          totalFee: this.calculateTotalFees(transactions),
         });
       } else {
-        const provider = this.getProvider(protocol);
-
-        const limit = 1000;
         let count = 0;
         let totalFeeEth = BigNumber(0);
         let totalFeeUsdt = BigNumber(0);
         let start = startTimestamp;
 
         while (true) {
-          const data = await provider.getTransactions({
-            pool,
-            page: 0,
-            limit,
-            startTimestamp: start,
-            endTimestamp,
-            sort: 'asc',
-          });
-
-          this.logger.log(
-            `Got ${data.length} transactions from provider, start: ${start}, end: ${endTimestamp}`,
-          );
-
-          let transactions = await this.mapProviderResultToModel(
+          const transactions = await this.saveTransactionsFromProvider({
             protocol,
             pool,
-            data,
-          );
+            sort: 'asc',
+            startTimestamp: start,
+            endTimestamp,
+          });
 
-          transactions = await this.addFeesInUsdt(transactions);
+          const { eth, usdt } = this.calculateTotalFees(transactions);
 
-          await this.saveTransactionsFromProvider(transactions);
+          totalFeeEth = totalFeeEth.plus(eth);
 
-          totalFeeEth = totalFeeEth.plus(
-            transactions.reduce(
-              (acc, item) => acc.plus(item.fee.eth),
-              BigNumber(0),
-            ),
-          );
+          totalFeeUsdt = totalFeeUsdt.plus(usdt);
 
-          totalFeeUsdt = totalFeeUsdt.plus(
-            transactions.reduce(
-              (acc, item) => acc.plus(item.fee.usdt),
-              BigNumber(0),
-            ),
-          );
+          count += transactions.length;
+          start = transactions[transactions.length - 1].timestamp;
 
-          count += data.length;
-          start = data[data.length - 1].timestamp;
-
-          if (data.length < limit - 1) {
+          // means this is the last page of the results
+          if (transactions.length < this.MAX_RECORDS_PER_INTERVAL - 1) {
             break;
           }
         }
 
-        // handle special case when endTimestamp is greater than current time
-
+        // TODO: handle special case when endTimestamp is greater than current time
         await this.mergeRecordIntervals(
           protocol,
           pool,
-          allIntervals,
           startTimestamp,
           endTimestamp,
         );
@@ -267,8 +250,7 @@ export class TransactionService {
         });
       }
     } catch (e) {
-      // TODO: Log error
-      console.log(e);
+      this.logger.error(e);
       await this.reportRepo.findByIdAndUpdate(id, {
         status: ReportStatus.FAILED,
       });
@@ -289,60 +271,15 @@ export class TransactionService {
         })
       : await this.transactionRepo.find({}).sort({ timestamp: -1 }).limit(1);
 
-    const limit = 1000;
-    let page = 0;
-
     while (true) {
-      const data = await provider.getTransactions({
+      const transactions = await this.saveTransactionsFromProvider({
+        protocol,
         pool,
-        page: 0,
-        limit: 1000,
         startBlock: latestBlock[0].blockNumber,
-        sort: 'asc',
+        sort: 'desc',
       });
 
-      this.logger.log(
-        `Found ${data.length} recent transactions for ${protocol} ${pool}`,
-      );
-
-      let transactions = await this.mapProviderResultToModel(
-        protocol,
-        pool,
-        data,
-      );
-
-      this.logger.log(
-        `Calculating fees in usdt on new transactions for ${protocol} ${pool}`,
-      );
-
-      transactions = await this.addFeesInUsdt(transactions);
-
-      const newTxCount = await this.saveTransactionsFromProvider(transactions);
-
-      this.logger.log(
-        `Saving ${newTxCount} new transactions for ${protocol} ${pool}`,
-      );
-
-      const allIntervals = await this.intervalRepo.find({
-        protocol,
-        pool,
-      });
-
-      this.logger.log(
-        `Merging intervals for ${protocol} ${pool} with ${allIntervals.length} records`,
-      );
-
-      await this.mergeRecordIntervals(
-        protocol,
-        pool,
-        allIntervals,
-        transactions[0].timestamp,
-        transactions[transactions.length - 1].timestamp,
-      );
-
-      page++;
-
-      if (data.length < limit - 1) {
+      if (transactions.length < this.MAX_RECORDS_PER_INTERVAL - 1) {
         break;
       }
     }
@@ -380,9 +317,7 @@ export class TransactionService {
     });
   }
 
-  private async saveTransactionsFromProvider(
-    data: Transaction[],
-  ): Promise<number> {
+  private async bulkUpsertToDb(data: Transaction[]): Promise<number> {
     // Prepare the list of update operations
     const updateOperations = data.map((document) => ({
       updateOne: {
@@ -450,15 +385,125 @@ export class TransactionService {
     return output;
   }
 
+  async saveTransactionsFromProvider(options: {
+    protocol: Protocol;
+    pool: Pool;
+    sort: 'asc' | 'desc';
+    startBlock?: number;
+    endBlock?: number;
+    startTimestamp?: number;
+    endTimestamp?: number;
+  }): Promise<Transaction[]> {
+    const {
+      protocol,
+      pool,
+      sort,
+      startBlock,
+      endBlock,
+      startTimestamp,
+      endTimestamp,
+    } = options;
+
+    if (!startBlock && !startTimestamp && !endBlock && !endTimestamp)
+      throw new Error('No start or end provided');
+
+    const provider = this.getProvider(protocol);
+
+    const data = await provider.getTransactions({
+      pool,
+      page: 0,
+      limit: this.MAX_RECORDS_PER_INTERVAL,
+      startBlock,
+      endBlock,
+      startTimestamp,
+      endTimestamp,
+      sort,
+    });
+
+    this.logger.log(
+      `Found ${data.length} recent transactions for ${protocol} ${pool}`,
+    );
+
+    let transactions = await this.mapProviderResultToModel(
+      protocol,
+      pool,
+      data,
+    );
+
+    this.logger.log(
+      `Calculating fees in usdt on new transactions for ${protocol} ${pool}`,
+    );
+
+    transactions = await this.addFeesInUsdt(transactions);
+
+    const newTxCount = await this.bulkUpsertToDb(transactions);
+
+    this.logger.log(
+      `Saving ${newTxCount} new transactions for ${protocol} ${pool}`,
+    );
+
+    await this.mergeRecordIntervals(
+      protocol,
+      pool,
+      transactions[0].timestamp,
+      transactions[transactions.length - 1].timestamp,
+    );
+
+    return transactions;
+  }
+
+  private calculateTotalFees(transactions: Transaction[]) {
+    const totalFeeEth = transactions.reduce(
+      (acc, item) => acc.plus(item.fee.eth),
+      BigNumber(0),
+    );
+
+    const totalFeeUsdt = transactions.reduce(
+      (acc, item) => acc.plus(item.fee.usdt),
+      BigNumber(0),
+    );
+
+    return {
+      eth: totalFeeEth.toString(),
+      usdt: totalFeeUsdt.toString(),
+    };
+  }
+
+  private async dataIntervalExists(
+    protocol: Protocol,
+    pool: Pool,
+    start: number,
+    end: number,
+  ): Promise<boolean> {
+    const allIntervals = await this.intervalRepo.find({
+      protocol,
+      pool,
+    });
+
+    return (
+      allIntervals.findIndex(
+        (item) => item.start <= start && item.end >= end,
+      ) !== -1
+    );
+  }
+
   private async mergeRecordIntervals(
     protocol: Protocol,
     pool: Pool,
-    intervals: RecordInterval[],
     start: number,
     end: number,
   ): Promise<void> {
     let left = [];
     let right = [];
+
+    const intervals = await this.intervalRepo.find({
+      protocol,
+      pool,
+    });
+
+    this.logger.log(
+      `Merging intervals for ${protocol} ${pool} with ${intervals.length} records`,
+    );
 
     for (const interval of intervals) {
       const { start: first, end: last } = interval;
