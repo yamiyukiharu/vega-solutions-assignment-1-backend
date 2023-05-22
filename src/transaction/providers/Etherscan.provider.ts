@@ -54,7 +54,6 @@ export class EtherscanProvider extends ITransactionProvider {
       sort = 'asc',
     } = options;
 
-    const offset = page * limit;
     const address = this.getPoolAddress(pool);
     const contractAddress = this.getContractAddress(pool);
 
@@ -64,7 +63,7 @@ export class EtherscanProvider extends ITransactionProvider {
       action: 'tokentx',
       address: address,
       contractAddress: contractAddress,
-      page: offset.toString(),
+      page: (page+1).toString(), // etherscan starts at 1
       offset: limit.toString(),
       startblock: startBlock.toString(),
       endblock: endBlock.toString(),

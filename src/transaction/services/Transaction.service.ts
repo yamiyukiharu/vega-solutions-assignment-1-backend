@@ -56,7 +56,7 @@ export class TransactionService {
     // get the latest interval
     const latestInterval = (await this.intervalRepo
       .findOne()
-      .sort({ timestamp: -1 })) || {
+      .sort({ end: -1 })) || {
       start: dayjs().unix(),
       end: dayjs().unix(),
     };
@@ -79,8 +79,8 @@ export class TransactionService {
     await this.saveTransactionsFromProvider({
       protocol,
       pool,
-      limit,
-      endTimestamp: latestInterval.end,
+      page,
+      limit: limit + 50, // fetch more data to make sure we have enough
       sort: 'desc',
     });
 
@@ -422,6 +422,7 @@ export class TransactionService {
     protocol: Protocol;
     pool: Pool;
     limit?: number;
+    page?: number;
     sort?: 'asc' | 'desc';
     startBlock?: number;
     endBlock?: number;
@@ -431,6 +432,7 @@ export class TransactionService {
     const {
       protocol,
       pool,
+      page,
       limit,
       sort,
       startBlock,
@@ -439,14 +441,11 @@ export class TransactionService {
       endTimestamp,
     } = options;
 
-    if (!startBlock && !startTimestamp && !endBlock && !endTimestamp)
-      throw new Error('No start or end provided');
-
     const provider = this.getProvider(protocol);
 
     const data = await provider.getTransactions({
       pool,
-      page: 0,
+      page: page || 0,
       limit: limit || this.MAX_RECORDS_PER_INTERVAL,
       startBlock,
       endBlock,

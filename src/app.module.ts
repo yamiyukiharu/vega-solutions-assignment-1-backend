@@ -28,6 +28,7 @@ import {
   RecordIntervalSchema,
 } from './transaction/models/RecordInterval.model';
 import { RedisCacheModule } from './common/modules/RedisCache.module';
+import { EtherscanProvider } from './transaction/providers/Etherscan.provider';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { RedisCacheModule } from './common/modules/RedisCache.module';
     RedisCacheModule,
     ThrottlerModule.forRoot({
       ttl: 60,
-      limit: 10,
+      limit: 20,
     }),
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
@@ -56,7 +57,7 @@ import { RedisCacheModule } from './common/modules/RedisCache.module';
     ExchangeRateService,
     {
       provide: ITransactionProvider,
-      useClass: TheGraphUniswapV3Provider,
+      useClass: EtherscanProvider,
     },
     {
       provide: IExchangeRateProvider,
