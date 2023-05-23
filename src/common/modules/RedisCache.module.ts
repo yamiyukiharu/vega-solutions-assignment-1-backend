@@ -11,10 +11,9 @@ import { AppConfigModule } from './AppConfig.module';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         store: (await redisStore.redisStore({
-          socket: {
-            host: 'localhost', // default value
-            port: 6379, // default value
-          },
+          url: `redis://${configService.get('REDIS_HOST')}:${configService.get(
+            'REDIS_PORT',
+          )}`,
           ttl: 4, // issue with cache-manager version, ttl in set() does not work
         })) as any,
       }),

@@ -25,7 +25,6 @@ services:
     networks:
       - webnet
   api:
-    container_name: vega-backend-api
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -39,10 +38,10 @@ services:
       - mongodb
       - redis
     environment:
+      - REDIS_HOST=redis
       - DB_URL=mongodb://root:example@mongodb:27017/vega?authSource=admin
 
   worker:
-    container_name: vega-backend-worker
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -55,10 +54,10 @@ services:
       - mongodb
       - redis
     environment:
+      - REDIS_HOST=redis
       - DB_URL=mongodb://root:example@mongodb:27017/vega?authSource=admin
 
   task:
-    container_name: vega-backend-task
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -71,6 +70,7 @@ services:
       - mongodb
       - redis
     environment:
+      - REDIS_HOST=redis
       - DB_URL=mongodb://root:example@mongodb:27017/vega?authSource=admin
 
 networks:

@@ -237,14 +237,6 @@ export class TransactionService {
           }
         }
 
-        // TODO: handle special case when endTimestamp is greater than current time
-        await this.mergeRecordIntervals(
-          protocol,
-          pool,
-          startTimestamp,
-          endTimestamp,
-        );
-
         await this.reportRepo.findByIdAndUpdate(id, {
           status: ReportStatus.COMPLETED,
           count,

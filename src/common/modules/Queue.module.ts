@@ -11,8 +11,8 @@ import { RECORD_QUEUE, REPORTS_QUEUE } from '../constants';
       name: REPORTS_QUEUE,
       useFactory: async (configService: ConfigService) => ({
         redis: {
-          host: configService.get('QUEUE_HOST'),
-          port: configService.get('QUEUE_PORT'),
+          host: configService.get('REDIS_HOST'),
+          port: configService.get('REDIS_PORT'),
         },
       }),
       inject: [ConfigService],
@@ -22,8 +22,8 @@ import { RECORD_QUEUE, REPORTS_QUEUE } from '../constants';
       name: RECORD_QUEUE,
       useFactory: async (configService: ConfigService) => ({
         redis: {
-          host: configService.get('QUEUE_HOST'),
-          port: configService.get('QUEUE_PORT'),
+          host: configService.get('REDIS_HOST'),
+          port: configService.get('REDIS_PORT'),
         },
       }),
       inject: [ConfigService],
