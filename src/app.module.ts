@@ -39,7 +39,7 @@ import { EtherscanProvider } from './transaction/providers/Etherscan.provider';
     RedisCacheModule,
     ThrottlerModule.forRoot({
       ttl: 60,
-      limit: 20,
+      limit: 200,
     }),
     MongooseModule.forFeature([
       { name: Transaction.name, schema: TransactionSchema },
